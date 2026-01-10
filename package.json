@@ -1,0 +1,44 @@
+{
+  "name": "@iyulab/enterprise",
+  "version": "0.1.0",
+  "description": "Enterprise utilities and components for iyulab framework",
+  "keywords": [
+    "enterprise",
+    "utilities",
+    "framework"
+  ],
+  "license": "MIT",
+  "author": "iyulab",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iyulab/node-enterprise.git"
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@iyulab/components": "workspace:*",
+    "@iyulab/data-components": "workspace:*",
+    "@iyulab/modern-app": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7",
+    "vite-plugin-dts": "^4.4.0"
+  }
+}

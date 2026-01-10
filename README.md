@@ -1,2 +1,26 @@
-# node-enterprise
-이유프레임워크의 재사용 라이브러리
+# @iyulab/enterprise
+
+Enterprise utilities and components for iyulab framework.
+
+## Installation
+
+```bash
+npm install @iyulab/enterprise
+```
+
+## Usage
+
+```typescript
+import { } from '@iyulab/enterprise';
+```
+
+## Development
+
+```bash
+# Build
+npm run build
+```
+
+## License
+
+MIT
