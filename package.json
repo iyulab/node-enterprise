@@ -31,9 +31,9 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@iyulab/components": "workspace:*",
-    "@iyulab/data-components": "workspace:*",
-    "@iyulab/modern-app": "workspace:*"
+    "@iyulab/components": "*",
+    "@iyulab/data-components": "*",
+    "@iyulab/modern-app": "*"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
