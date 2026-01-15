@@ -5,6 +5,8 @@
     "module": "ESNext",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "moduleResolution": "Bundler",
+    "types": ["vite/client", "node"],
+    "jsx": "react-jsx",
 
     // 엄격한 타입 체킹
     "strict": true,
