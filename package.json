@@ -33,7 +33,7 @@
   "dependencies": {
     "@iyulab/components": "0.2.0",
     "@iyulab/data-components": "0.0.1",
-    "@iyulab/modern-app": "0.2.5"
+    "@iyulab/modern-app": "0.3.0"
   },
   "devDependencies": {
     "@types/node": "^25.0.9",
