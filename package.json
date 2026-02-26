@@ -31,7 +31,7 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@iyulab/components": "0.2.0",
+    "@iyulab/components": "0.3.0",
     "@iyulab/data-components": "0.0.1",
     "@iyulab/modern-app": "0.3.0",
     "quill": "2.0.3"
