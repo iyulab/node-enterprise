@@ -31,14 +31,14 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@iyulab/components": "1.0.5",
+    "@iyulab/components": "1.0.6",
     "@iyulab/data-components": "0.4.1",
     "@iyulab/modern-app": "0.3.5"
   },
   "devDependencies": {
-    "@types/node": "^25.6.2",
+    "@types/node": "^25.8.0",
     "typescript": "^5.9.3",
-    "vite": "^8.0.11",
+    "vite": "^8.0.13",
     "vite-plugin-dts": "^5.0.0"
   }
 }
