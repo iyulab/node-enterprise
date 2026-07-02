@@ -1,6 +1,6 @@
 # @iyulab/enterprise
 
-iyulab 프레임워크의 엔터프라이즈 통합 패키지. 하위 UI/데이터/앱 패키지를 재노출하고, 폼 레이아웃 컴포넌트·API 설정·도메인 헬퍼를 제공합니다.
+iyulab 프레임워크의 엔터프라이즈 통합 패키지. 폼 레이아웃 컴포넌트·API 설정·도메인 헬퍼를 제공합니다.
 
 ## Installation
 
@@ -22,18 +22,11 @@ npm install @iyulab/enterprise
 | `ProgressHelper` | class | 진행률 계산 |
 | `UrgencyHelper` | class | 긴급도 계산 |
 
-### 2. 재노출 (편의를 위한 re-export)
+### 2. 심볼 출처 (v0.3.0부터 하위 패키지 재노출 제거됨)
 
-`@iyulab/enterprise`는 하위 패키지를 `export *`로 재노출합니다:
+`@iyulab/enterprise`는 **자기 고유 export만** 제공합니다(위 표). `@iyulab/components`(컴포넌트), `@iyulab/data-components`(데이터 그리드/시트), `@iyulab/modern-app`(앱 프레임워크, 라우팅)은 각 패키지에서 **직접 import**하세요.
 
-- `@iyulab/components` (기반 UI 컴포넌트)
-- `@iyulab/data-components` (데이터 그리드/시트)
-- `@iyulab/modern-app` (앱 프레임워크)
-
-> ⚠️ **재노출은 편의용이며 SoT가 아닙니다.** 프레임워크(`app`)·컴포넌트를 쓸 때는 **각 하위 패키지에서 직접 import**하는 것을 권장합니다. enterprise를 통한 간접 소비와 직접 소비를 섞으면 심볼 출처가 갈라져 혼란과(중복 설치 시) 이중 인스턴스 위험이 생길 수 있습니다.
-> - 컴포넌트 → `@iyulab/components`
-> - 프레임워크(`app`, 라우팅) → `@iyulab/modern-app`
-> - 폼 레이아웃/API 설정/도메인 헬퍼 → `@iyulab/enterprise`
+> v0.2.x까지는 위 3개 패키지를 `export *`로 재노출했으나, 심볼 출처 혼란과 exact-pin(v0.2.2 이전) 조합 시 이중 인스턴스 위험 때문에 v0.3.0에서 제거했습니다. 재노출에 의존하던 코드는 `@iyulab/enterprise`가 아닌 각 하위 패키지에서 직접 import하도록 수정해야 합니다.
 
 ## Usage
 
