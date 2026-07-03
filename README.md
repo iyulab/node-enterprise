@@ -17,6 +17,10 @@ npm install @iyulab/enterprise
 | `FormSection` | React | 제목 + 세로 스택 폼 섹션 |
 | `FormRow` | React | 2컬럼 그리드 폼 행(`full`로 1컬럼) |
 | `ApiConfig` | class | baseUrl/OData·API prefix·dev 판별 중앙 설정 |
+| `createODataService` | factory | OData v4 + custom REST CRUD 서비스(401·토스트·에러파싱) |
+| `ApiError` | class | HTTP status 를 실은 API 호출 실패 에러 |
+| `createAuthClient` | factory | 쿠키 세션 인증(fetchMe/login/logout) — 제네릭 user/자격증명 |
+| `createPermissionStore` · `hasPermission` 외 | store | 권한 스냅샷 store + 판정 free 함수 |
 | `CurrencyHelper` | class | 통화 포맷(`formatKRW` 등) |
 | `DateHelper` | class | 날짜 포맷/파싱 |
 | `ProgressHelper` | class | 진행률 계산 |
@@ -61,6 +65,71 @@ ApiConfig.getApiUrl('auth/me')           // → /api/auth/me
 ApiConfig.getUrlWithParams('report', { year: 2026, active: true })
 ApiConfig.isDevelopment                   // 환경 판별
 ```
+
+### OData 서비스 (`createODataService`)
+
+OData v4 + custom REST CRUD 를 한 번에 구성한다. 401 세션 처리·에러 메시지 추출·성공 토스트·204 빈 바디 안전 파싱이 내장돼 있고, **도메인/로케일 요소는 전부 주입**으로 앱 adapter 에 남긴다.
+
+```typescript
+import { createODataService } from '@iyulab/enterprise'
+import { app } from '@iyulab/modern-app'
+
+// 앱 adapter (예: src/lib/odata.ts) — 라이브러리는 이 배선만 받는다.
+export const svc = createODataService({
+  baseUrl: window.location.origin,
+  onUnauthorized: () => { window.location.href = '/' },        // 세션 만료 리다이렉트는 앱이 결정
+  notify: { success: (m) => app.success(m), error: (m) => app.error(m) },
+  messages: {                                                   // 기본은 영어 — 로케일 오버라이드
+    saved: '저장되었습니다', updated: '수정되었습니다', deleted: '삭제되었습니다',
+    sessionExpired: '세션이 만료되었습니다. 다시 로그인하세요.',
+  },
+})
+
+await svc.odataGet<Order>('Orders', { $top: '20' })   // value 배열 언랩
+await svc.odataPost<Order>('Orders', { name: 'A', note: '' })  // '' → null 정규화 + 성공 토스트
+await svc.apiDelete('orders/7')                        // 204 안전
+svc.odataUrl('Orders')                                 // flex-table useODataSource 엔드포인트
+svc.sourceDefaults                                     // { baseUrl, onUnauthorized } 주입용
+```
+
+주입 항목:
+
+| config | 용도 |
+|--------|------|
+| `baseUrl` | 모든 요청의 오리진 (필수) |
+| `odataPrefix` / `apiPrefix` | 엔드포인트 prefix (기본 `$data` / `api`) |
+| `onUnauthorized(status)` | 401 시 호출 — 리다이렉트/재진입 가드는 앱이 처리 |
+| `notify.success/error` | 토스트 훅 (생략 시 토스트 없음 — 순수) |
+| `messages` | 사용자 대면 문구 (기본 영어, 지정 키만 대체) |
+| `formatError(info)` | 에러 메시지 포매팅 오버라이드 (앱별 정책) |
+
+> 도메인 액션(상태 전이 등)·엔티티 목록·권한 코드는 라이브러리에 넣지 말고 앱 adapter 에 둔다.
+
+### 인증 + 권한 (`createAuthClient` · 권한 store)
+
+쿠키 세션 인증 흐름과 권한 스냅샷을 승격. 사용자·자격증명 **형태는 앱이 제네릭으로 정의**하고, 권한 코드는 불투명 문자열로만 다룬다. `getPermissions` 를 주면 로그인/세션 조회 성공 시 권한 store 가 자동 갱신된다.
+
+```typescript
+import { createAuthClient, hasPermission, setPermissions } from '@iyulab/enterprise'
+
+interface User { Id: string; Permissions: string[] }   // 도메인 형태 = 앱 소유
+
+export const auth = createAuthClient<User, { Username: string; Password: string }>({
+  meUrl: '/api/auth/me', loginUrl: '/api/auth/login', logoutUrl: '/api/auth/logout',
+  getPermissions: (u) => u.Permissions,                 // 성공 시 권한 store 자동 set
+  messages: { invalidCredentials: '사용자명 또는 비밀번호가 올바르지 않습니다.' },
+})
+
+// 부팅 게이트
+const user = await auth.fetchMe()   // null → 미인증(로그인 화면)
+
+// 어디서나 권한 판정(부팅 스냅샷)
+if (hasPermission('orders.write')) { /* 저장 버튼 노출 */ }
+```
+
+- `fetchMe()` 는 401/네트워크 오류 시 `null` — 이 신호가 로그인 게이트를 구동한다(라이브러리가 리다이렉트하지 않음).
+- 격리가 필요하면 `createPermissionStore()` 로 별도 store 를 만들어 `permissionStore` 로 주입한다.
+- 도메인 판정(`isPortalUser` 등)·권한 코드 상수는 라이브러리가 아니라 앱 adapter 에 둔다.
 
 ### 도메인 헬퍼
 
