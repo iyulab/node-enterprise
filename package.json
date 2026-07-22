@@ -32,8 +32,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@iyulab/components": "^1.5.1",
-    "@iyulab/data-components": "^0.6.1",
+    "@iyulab/components": "^1.8.0",
+    "@iyulab/data-components": "^0.7.0",
     "@iyulab/http-client": "^0.10.0",
     "@iyulab/modern-app": "^0.6.0",
     "odata-query": "^8.1.0"
