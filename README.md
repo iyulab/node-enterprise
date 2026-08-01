@@ -50,8 +50,16 @@ import { FormSection, FormRow } from '@iyulab/enterprise'
 </FormSection>
 ```
 
-- `FormRow`는 기본 2컬럼 그리드입니다. 한 칸을 차지하려면 `full`을 씁니다.
-- (3컬럼 이상 등 커스텀 레이아웃이 필요하면 현재는 직접 CSS grid를 쓰세요. `columns` prop 확장은 로드맵에 있습니다.)
+- `FormRow`는 기본 2컬럼 그리드입니다. 한 칸을 차지하려면 `full`을, 다른 열 수가 필요하면 `columns`를 씁니다.
+- 두 컴포넌트 모두 `className`·`style`을 받아 기본값 **뒤에** 병합합니다 — 블록을 복제하지 않고 조정하는 정규 경로입니다. `FormSection`은 제목 줄만 바꾸는 `titleStyle`도 받습니다.
+
+```tsx
+<FormRow columns={3}>…</FormRow>
+<FormSection title="기본 정보" style={{ marginBottom: 32 }}>…</FormSection>
+```
+
+> 이 계층이 무엇을 소유하고 무엇을 소유하지 않는지, 새 패턴이 언제 추가되는지는
+> **[LOB 계층 헌장](./docs/lob-layers.md)** 이 정합니다. 패턴을 제안하기 전에 읽어 주세요.
 
 ### API 설정
 
