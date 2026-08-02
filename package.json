@@ -1,6 +1,6 @@
 {
   "name": "@iyulab/enterprise",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Enterprise utilities and components for iyulab framework",
   "keywords": [
     "enterprise",
@@ -32,10 +32,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@iyulab/components": "^1.8.0",
-    "@iyulab/data-components": "^0.7.0",
     "@iyulab/http-client": "^0.10.0",
-    "@iyulab/modern-app": "^0.6.0",
     "odata-query": "^8.1.0"
   },
   "devDependencies": {
@@ -44,5 +41,8 @@
     "vite": "^8.1.4",
     "vite-plugin-dts": "^5.0.3",
     "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "react": ">=18"
   }
 }

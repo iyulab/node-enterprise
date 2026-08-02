@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.6.0
+
+### Fixed
+
+- **매니페스트가 산출물과 어긋나 있었다** — 양방향 모두.
+
+  ```
+  제거   @iyulab/components · @iyulab/data-components · @iyulab/modern-app
+         → dist 가 셋 다 import 하지 않는다(소스에서도 0건)
+  추가   react → peerDependencies
+         → dist 가 import 하는데 dependencies·peerDependencies·devDependencies
+           어디에도 선언이 없었다
+  ```
+
+  ★**미사용 선언의 비용은 디스크가 아니라 사본이다.** `0.x` 캐럿은 마이너를 고정하므로
+  (`^0.6.0` 은 `0.8.0` 을 받지 못한다) 소비자가 셸을 올릴수록 중복이 확정된다. 지금은
+  `dist` 가 import 하지 않아 로드되지 않지만, 그 무해 판정의 근거는 *"지금 import 하지
+  않는다"* 하나뿐이었다 — 커스텀 엘리먼트를 등록하는 패키지가 섞여 있어 한 줄이면
+  `customElements.define` 이 두 번 불린다.
+
+  ★**`react` 미선언이 더 위험했다.** 번들에서 external 로 빼 놓고 요구하지 않았으니,
+  지금 동작하는 이유는 소비자가 React 앱이라 **우연히 있기 때문**이다.
+
+  ⚠**동작 변경 없음** — 제거된 셋은 `dist` 가 참조한 적이 없다. `--u-*` 커스텀 프로퍼티는
+  리터럴 폴백과 함께 쓰므로 코드 의존이 아니다(토큰 시트를 로드하면 그 값을 따라간다).
+
+- **`odata-query` 가 번들에 인라인돼 있었다** — external 목록에 없어 라이브러리 코드가
+  `dist` 에 통째로 실렸고, 그러면서 `dependencies` 에도 선언돼 있었다. 소비자가 같은
+  것을 **두 벌** 갖는 형태다. external 로 옮겼다(선언은 그대로).
+
 ## 0.5.0
 
 ### Added
