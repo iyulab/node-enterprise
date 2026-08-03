@@ -35,7 +35,7 @@ export function FormRow({
       style={{
         display: 'grid',
         gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gap: '8px',
+        gap: 'var(--u-space-sm, 8px)',
         ...style,
       }}
     >
