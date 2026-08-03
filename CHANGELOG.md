@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.8.0
+
+### Changed
+
+- ⚠**헬퍼 라벨이 «영어 기본 + 로케일 레지스트리»로 이주했다** — `ProgressHelper` 6건 ·
+  `UrgencyHelper` 8건이 한국어 리터럴이었다.
+
+  ```ts
+  import { Locale } from '@iyulab/components';
+  import { messages } from '@iyulab/enterprise';
+
+  Locale.set('ko');                                   // 검증 메시지와 함께 전환된다
+  messages.register('ja', { progressDone: '完了' });   // 언어를 더하거나 문구를 덮는다
+  ```
+
+  ⚠**한국어 환경은 종전과 같은 문구를 본다** — 내장 로케일에 `ko` 가 들어 있고, 활성 로케일은
+  브라우저 언어에서 감지된다(`ko-KR` → `ko`). 그 밖의 환경은 이제 **영어**를 본다.
+
+  ⚠**호출자가 준 `labels` 인자는 여전히 최우선**이다(`getUrgencyText`) — 종전 계약 유지.
+
+  ★자체 레지스트리를 만들지 않고 `@iyulab/components` 의 `Locale.namespace()` 를 쓴다. 앱
+  하나에서 로케일을 두 번 전환하게 만들지 않기 위해서다.
+
+### Requires
+
+- `@iyulab/components >= 1.23.0` (`Locale.namespace`) — peer 하한을 올렸다.
+
 ## 0.7.1
 
 ### Fixed

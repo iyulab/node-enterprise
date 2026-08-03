@@ -1,3 +1,5 @@
+import { messages } from './messages';
+
 /**
  * Progress bar and percentage utility class
  */
@@ -56,12 +58,12 @@ export class ProgressHelper {
     static getProgressLabel(progress: number): string {
         const validated = this.validateProgress(progress);
 
-        if (validated === 0) return '시작 전';
-        if (validated < 25) return '초기 단계';
-        if (validated < 50) return '진행 중';
-        if (validated < 75) return '중반 이상';
-        if (validated < 100) return '거의 완료';
-        return '완료';
+        if (validated === 0) return messages.text('progressNotStarted');
+        if (validated < 25) return messages.text('progressEarly');
+        if (validated < 50) return messages.text('progressInProgress');
+        if (validated < 75) return messages.text('progressPastMid');
+        if (validated < 100) return messages.text('progressAlmost');
+        return messages.text('progressDone');
     }
 
     /**

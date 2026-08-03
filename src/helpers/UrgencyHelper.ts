@@ -1,3 +1,5 @@
+import { messages } from './messages';
+
 /**
  * Urgency level types
  */
@@ -80,11 +82,11 @@ export class UrgencyHelper {
         labels?: Partial<Record<UrgencyLevel, string>>
     ): string {
         const defaultLabels: Record<UrgencyLevel, string> = {
-            overdue: '지연',
-            critical: '매우 급함',
-            urgent: '급함',
-            soon: '곧 도래',
-            normal: '여유'
+            overdue: messages.text('urgencyOverdue'),
+            critical: messages.text('urgencyCritical'),
+            urgent: messages.text('urgencyUrgent'),
+            soon: messages.text('urgencySoon'),
+            normal: messages.text('urgencyNormal')
         };
 
         const level = this.getUrgencyLevel(daysRemaining, config);
@@ -122,12 +124,12 @@ export class UrgencyHelper {
         }
 
         if (daysRemaining < 0) {
-            return `${Math.abs(daysRemaining)}일 지연`;
+            return messages.text('daysOverdue', { days: Math.abs(daysRemaining) });
         }
         if (daysRemaining === 0) {
-            return '오늘';
+            return messages.text('daysToday');
         }
-        return `${daysRemaining}일`;
+        return messages.text('daysRemaining', { days: daysRemaining });
     }
 
     /**
