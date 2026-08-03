@@ -33,18 +33,50 @@ describe('하우스 프리셋 계약', () => {
   it('⑵ 새 클래스·요소 선택자를 만들지 않는다', () => {
     const bad = blocks()
       .map(b => b.selector)
-      .filter(s => !/^:where\(:root(\[theme='dark'\])?\)$/.test(s));
-    expect(bad, '허용 선택자는 :where(:root) 와 :where(:root[theme=\'dark\']) 뿐이다').toEqual([]);
+      .filter(s => !/^:root(\[theme='dark'\])?$/.test(s));
+    expect(bad, "허용 선택자는 :root 와 :root[theme='dark'] 뿐이다").toEqual([]);
   });
 
-  it('🔴⑶ 소비자가 항상 이긴다 — 모든 선택자가 `:where()` 로 감싸져 특이도 0', () => {
-    // :where() 안의 것은 특이도에 기여하지 않는다. 그래서 소비앱의 평범한 `:root { … }`
-    // 한 줄이 **로드 순서와 무관하게** 이긴다. `:root` 로 선언하면 "뒤에 온 쪽이 이기는"
-    // 상황이 되고, 소비자는 `:root:not([theme="dark"])` 같은 특이도 방어를 쓰게 된다.
-    const notWrapped = blocks()
+  /**
+   * 🔴 **이 두 단언은 0.7.0 의 결함을 정정하며 «뒤집힌» 것이다.**
+   *
+   * 종전 판은 *"모든 선택자가 `:where()` 로 감싸져 특이도 0"* 을 요구했다. 의도는 옳았다 —
+   * 프리셋이 소비자 브랜드를 덮으면 안 된다. 그러나 특이도 0 은 **이겨야 할 상대(기본값)와
+   * 지지 말아야 할 상대(브랜드)를 구분하지 못한다.**
+   *
+   * ⇒ 그 테스트는 **통과하면서 기능을 무효로 만들고 있었다.** 실측: 프리셋 40선언 중
+   * 기본 시트(`:root`)에 없는 것이 **0개** ⇒ `:where()`(0,0,0)가 이길 수 있는 자리가
+   * 하나도 없어 **한 줄도 적용되지 않았다.** 그리고 그 실패는 **조용했다.**
+   *
+   * ★이 리포가 반복해서 본 형태다 — *"계약을 «존재»로 검증하고 «효력»으로 검증하지 않았다"*
+   * (모션 축: 시트에 축이 있고 단언 둘이 통과하는데 경유 컴포넌트가 0개였다).
+   * 그래서 아래 둘은 **효력**을 잰다: ⑴ 기본 시트를 이길 수 있는가, ⑵ 이길 것이 있는가.
+   */
+  it('🔴⑶-a 기본 시트를 이길 수 있다 — 특이도가 `:root` 와 대등하다', () => {
+    const weak = blocks()
       .map(b => b.selector)
-      .filter(s => !s.startsWith(':where('));
-    expect(notWrapped, '특이도 방어를 소비자에게 떠넘기지 않는다').toEqual([]);
+      .filter(s => s.includes(':where('));
+    expect(
+      weak,
+      ':where() 는 특이도 0 이라 기본 시트의 :root 를 «로드 순서와 무관하게» 이길 수 없다. ' +
+        '층은 로드 순서로 세운다 — 기본 → 프리셋 → 브랜드.',
+    ).toEqual([]);
+  });
+
+  it('🔴⑶-b 이길 «것»이 있다 — 기본 시트와 다른 값이 하나 이상이다', () => {
+    // 특이도가 맞아도 값이 전부 같으면 프리셋은 여전히 아무 일도 하지 않는다.
+    // 소비자에게 두 상태는 렌더에서 구별되지 않으므로 여기서 가른다.
+    const BASE = resolve(root, '..', 'components', 'src', 'assets', 'styles', 'light.css');
+    if (!existsSync(BASE)) return; // 단독 클론 — 형제 소스가 없다
+
+    const read = (p: string) =>
+      new Map([...stripComments(readFileSync(p, 'utf-8')).matchAll(/(--u-[\w-]+)\s*:\s*([^;]+);/g)]
+        .map(m => [m[1], m[2].trim()] as const));
+
+    const base = read(BASE);
+    const differing = [...read(join(root, SRC))].filter(([k, v]) => base.has(k) && base.get(k) !== v);
+    expect(differing.length, '프리셋이 기본값과 전부 같다 — 로드해도 아무 일이 일어나지 않는다')
+      .toBeGreaterThan(0);
   });
 
   it('축 이름을 발명하지 않는다 — components 가 여는 축만 채운다', () => {
