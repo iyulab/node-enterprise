@@ -44,6 +44,12 @@
     "vitest": "^4.1.10"
   },
   "peerDependencies": {
-    "react": ">=18"
+    "react": ">=18",
+    "@iyulab/components": ">=1.21.0"
+  },
+  "peerDependenciesMeta": {
+    "@iyulab/components": {
+      "optional": true
+    }
   }
 }
