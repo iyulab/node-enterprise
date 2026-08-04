@@ -29,8 +29,9 @@
     "./styles/preset.css": "./dist/styles/preset.css"
   },
   "scripts": {
-    "build": "vite build && node scripts/copy-styles.mjs",
-    "test": "vitest run"
+    "build": "npm run typecheck && vite build && node scripts/copy-styles.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@iyulab/http-client": "^0.10.0",
