@@ -9,3 +9,6 @@ node_modules
 # output files
 dist/
 pnpm-lock.yaml
+
+# 개발 추적 문서 — 게시 리포에 커밋하지 않는다(정제된 docs/ 만 남긴다)
+claudedocs/
