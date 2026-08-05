@@ -17,16 +17,21 @@
     "dist",
     "package.json",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "type": "module",
   "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
     },
-    "./styles/preset.css": "./dist/styles/preset.css"
+    "./styles/preset.css": "./src/styles/preset.css"
   },
   "scripts": {
     "build": "npm run typecheck && vite build && node scripts/copy-styles.mjs",
