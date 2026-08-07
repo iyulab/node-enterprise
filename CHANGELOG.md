@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.1
+
+### Fixed
+
+- **`@types/react` was missing from the manifest**, so a standalone checkout (outside the
+  monorepo workspace, where hoisting used to paper over it) failed to typecheck against this
+  package's React-facing exports. Declared explicitly.
+
 ## 0.8.0
 
 ### Changed
