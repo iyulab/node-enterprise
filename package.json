@@ -1,6 +1,6 @@
 {
   "name": "@iyulab/enterprise",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "Enterprise utilities and components for iyulab framework",
   "keywords": [
     "enterprise",
@@ -53,7 +53,7 @@
   },
   "peerDependencies": {
     "react": ">=18",
-    "@iyulab/components": ">=1.23.0"
+    "@iyulab/components": ">=1.27.0"
   },
   "peerDependenciesMeta": {
     "@iyulab/components": {

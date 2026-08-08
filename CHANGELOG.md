@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.2
+
+### Changed
+
+- **`CurrencyHelper` now delegates to `@iyulab/components`' `formatCurrency`** instead of
+  duplicating `Intl.NumberFormat` logic. Output is unchanged for all existing methods
+  (`formatCurrency`/`formatKRW`/`formatUSD`/`formatEUR`/`formatJPY`/`formatCNY`/
+  `parseCurrency`) — this is a behavior-preserving internal change. The class is now marked
+  `@deprecated`; new code should call `formatCurrency`/`formatNumber`/`formatDate` from
+  `@iyulab/components` directly.
+
 ## 0.8.1
 
 ### Fixed
