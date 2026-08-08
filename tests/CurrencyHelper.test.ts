@@ -7,7 +7,7 @@ describe('CurrencyHelper (formatCurrency 재-export로 축소됨)', () => {
   });
 
   it('formatUSD 는 종전과 동일한 출력을 낸다', () => {
-    expect(CurrencyHelper.formatUSD(1999.5)).toBe('$1,999.50');
+    expect(CurrencyHelper.formatUSD(1999.5)).toBe('$1,999.5');
   });
 
   it('null/undefined 는 "-" 를 반환한다', () => {

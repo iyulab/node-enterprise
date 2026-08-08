@@ -24,7 +24,7 @@ export class CurrencyHelper {
     if (amount === null || amount === undefined) return '-';
 
     return formatCurrencyBase(amount, currency, {
-      minimumFractionDigits: currency === 'KRW' ? 0 : 2,
+      minimumFractionDigits: 0,
       maximumFractionDigits: currency === 'KRW' ? 0 : 2,
     }, locale);
   }
