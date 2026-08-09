@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { CurrencyHelper } from '../src/helpers/CurrencyHelper';
 
-describe('CurrencyHelper (formatCurrency 재-export로 축소됨)', () => {
+describe('CurrencyHelper (formatCurrency 위임으로 축소됨)', () => {
   it('formatKRW 는 종전과 동일한 출력을 낸다', () => {
     expect(CurrencyHelper.formatKRW(550000)).toBe('₩550,000');
   });

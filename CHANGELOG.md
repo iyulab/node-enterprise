@@ -10,6 +10,8 @@
   `parseCurrency`) — this is a behavior-preserving internal change. The class is now marked
   `@deprecated`; new code should call `formatCurrency`/`formatNumber`/`formatDate` from
   `@iyulab/components` directly.
+- **`@iyulab/components` peer floor raised to `>=1.27.0`** (the delegation above needs
+  `formatCurrency`, added in that release).
 
 ## 0.8.1
 
