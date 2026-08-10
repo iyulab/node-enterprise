@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **New opt-in subpath `@iyulab/enterprise/icons`.** Bundles 9 hand-drawn nav-style SVG
+  icons and registers them under the icon-library name `'house'` via `@iyulab/components`'
+  `IconRegistry`. Importing the main `@iyulab/enterprise` entry does not pull this in —
+  only importing `@iyulab/enterprise/icons` registers the library, matching how
+  `./styles/preset.css` is already opt-in.
+
+### Changed
+
+- **`sideEffects` narrowed from `false` to an explicit array.** Protects the new
+  `icons.ts` module (and, since this package builds as a single bundle with no
+  per-file output, the whole `index.ts`/`index.js` — which also covers a pre-existing
+  side effect in `helpers/messages.ts`) from being tree-shaken away by consumers'
+  production bundlers.
+
 ## 0.8.2
 
 ### Changed

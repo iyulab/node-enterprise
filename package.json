@@ -29,7 +29,9 @@
     "./src/index.ts",
     "./dist/index.js",
     "./src/icons.ts",
-    "./dist/icons.js"
+    "./dist/icons.js",
+    "./src/styles/preset.css",
+    "./dist/styles/preset.css"
   ],
   "exports": {
     ".": {
