@@ -31,6 +31,10 @@
       "types": "./src/index.d.ts",
       "import": "./src/index.js"
     },
+    "./icons": {
+      "types": "./src/icons.d.ts",
+      "import": "./src/icons.js"
+    },
     "./styles/preset.css": "./src/styles/preset.css"
   },
   "scripts": {

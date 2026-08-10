@@ -8,10 +8,13 @@ export default defineConfig({
     emptyOutDir: true,
     minify: false,
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        icons: resolve(__dirname, 'src/icons.ts'),
+      },
       formats: ['es'],
       fileName: (format, entry) => {
-        return format === 'es' ? 'index.js' : `${entry}.${format}.js`;
+        return format === 'es' ? `${entry}.js` : `${entry}.${format}.js`;
       }
     },
     rollupOptions: {
