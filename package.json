@@ -25,7 +25,12 @@
   "engines": {
     "node": ">=20"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/index.ts",
+    "./dist/index.js",
+    "./src/icons.ts",
+    "./dist/icons.js"
+  ],
   "exports": {
     ".": {
       "types": "./src/index.d.ts",
