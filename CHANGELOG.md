@@ -1,10 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.9.0
 
 ### Added
 
-- **New opt-in subpath `@iyulab/enterprise/icons`.** Bundles 9 hand-drawn nav-style SVG
+- **New opt-in subpath `@iyulab/enterprise/icons`.** Bundles 10 hand-drawn nav-style SVG
   icons and registers them under the icon-library name `'house'` via `@iyulab/components`'
   `IconRegistry`. Importing the main `@iyulab/enterprise` entry does not pull this in —
   only importing `@iyulab/enterprise/icons` registers the library, matching how
