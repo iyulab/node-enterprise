@@ -1,4 +1,4 @@
-import { IconRegistry } from '@iyulab/components';
+import { IconRegistry } from '@iyulab/components/dist/utilities/icons.js';
 
 const bundle = new Map<string, string>(
   Object.entries(import.meta.glob('./assets/icons/*.svg', {

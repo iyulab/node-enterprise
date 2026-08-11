@@ -1,4 +1,4 @@
-import { formatCurrency as formatCurrencyBase } from '@iyulab/components';
+import { formatCurrency as formatCurrencyBase } from '@iyulab/components/dist/utilities/format.js';
 
 /**
  * Currency formatting utility class.

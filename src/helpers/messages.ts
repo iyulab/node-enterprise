@@ -1,4 +1,4 @@
-import { Locale } from '@iyulab/components';
+import { Locale } from '@iyulab/components/dist/utilities/Locale.js';
 
 /**
  * `@iyulab/enterprise` 의 화면 문자열 — **영어 기본 + 로케일 레지스트리**.
