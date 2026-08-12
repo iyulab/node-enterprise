@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.1
+
+### Fixed
+
+- **`CurrencyHelper`, `messages`, and `icons` now deep-import `@iyulab/components`' utility
+  modules instead of the full package barrel.** Importing the barrel alongside
+  `@iyulab/components/react` in the same TypeScript program produced duplicate custom-element
+  registration and nominal-type conflicts for consumers; deep-importing avoids pulling in the
+  registration side effect these helpers never needed.
+
 ## 0.9.0
 
 ### Added
