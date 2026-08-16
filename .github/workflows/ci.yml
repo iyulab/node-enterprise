@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # lock 파일이 없는 정책이므로(배포도 `npm install` 을 쓴다) 자동 캐싱을 끈다 —
       # setup-node v5 의 packageManager 기반 캐싱은 lock-less 설치와 충돌한다.
