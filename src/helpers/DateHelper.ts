@@ -1,3 +1,5 @@
+import { EMPTY_VALUE_DISPLAY } from './constants';
+
 /**
  * Date manipulation and formatting utility class
  */
@@ -7,10 +9,10 @@ export class DateHelper {
      * @param date - Date to format (Date object or ISO string)
      */
     static formatDate(date: Date | string | null | undefined): string {
-        if (!date) return '-';
+        if (!date) return EMPTY_VALUE_DISPLAY;
 
         const d = typeof date === 'string' ? new Date(date) : date;
-        if (isNaN(d.getTime())) return '-';
+        if (isNaN(d.getTime())) return EMPTY_VALUE_DISPLAY;
 
         return d.toISOString().slice(0, 10);
     }
@@ -26,10 +28,10 @@ export class DateHelper {
         locale: string = 'ko-KR',
         options?: Intl.DateTimeFormatOptions
     ): string {
-        if (!date) return '-';
+        if (!date) return EMPTY_VALUE_DISPLAY;
 
         const d = typeof date === 'string' ? new Date(date) : date;
-        if (isNaN(d.getTime())) return '-';
+        if (isNaN(d.getTime())) return EMPTY_VALUE_DISPLAY;
 
         return d.toLocaleDateString(locale, options || {
             year: 'numeric',
@@ -43,10 +45,10 @@ export class DateHelper {
      * @param date - Date to format
      */
     static formatDateTime(date: Date | string | null | undefined): string {
-        if (!date) return '-';
+        if (!date) return EMPTY_VALUE_DISPLAY;
 
         const d = typeof date === 'string' ? new Date(date) : date;
-        if (isNaN(d.getTime())) return '-';
+        if (isNaN(d.getTime())) return EMPTY_VALUE_DISPLAY;
 
         return d.toISOString().slice(0, 16).replace('T', ' ');
     }

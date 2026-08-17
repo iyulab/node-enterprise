@@ -1,4 +1,5 @@
 import { formatCurrency as formatCurrencyBase } from '@iyulab/components/dist/utilities/format.js';
+import { EMPTY_VALUE_DISPLAY } from './constants';
 
 /**
  * Currency formatting utility class.
@@ -21,7 +22,7 @@ export class CurrencyHelper {
     currency: string = 'KRW',
     locale: string = 'ko-KR'
   ): string {
-    if (amount === null || amount === undefined) return '-';
+    if (amount === null || amount === undefined) return EMPTY_VALUE_DISPLAY;
 
     return formatCurrencyBase(amount, currency, {
       minimumFractionDigits: 0,

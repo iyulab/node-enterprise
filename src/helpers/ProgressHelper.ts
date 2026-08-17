@@ -21,13 +21,18 @@ export class ProgressHelper {
     }
 
     /**
-     * Validate and clamp progress to 0-100 range
+     * Validate and clamp progress to 0-100 range.
+     *
+     * Returns `null` for a missing/unparsable input rather than `0` — "no progress value yet"
+     * and "0% progress" are different facts and must not render identically.
      * @param progress - Raw progress value
      * @param round - Whether to round to integer (default: true)
      */
-    static validateProgress(progress: number | null | undefined, round: boolean = true): number {
+    static validateProgress(progress: number, round?: boolean): number;
+    static validateProgress(progress: number | null | undefined, round?: boolean): number | null;
+    static validateProgress(progress: number | null | undefined, round: boolean = true): number | null {
         if (progress === null || progress === undefined || isNaN(progress)) {
-            return 0;
+            return null;
         }
 
         let value = progress;
@@ -38,13 +43,15 @@ export class ProgressHelper {
     }
 
     /**
-     * Convert decimal ratio to percentage
+     * Convert decimal ratio to percentage.
+     *
+     * Returns `null` for a missing/unparsable input — see {@link validateProgress}.
      * @param ratio - Decimal ratio (0-1)
      * @param round - Whether to round to integer
      */
-    static ratioToPercent(ratio: number | null | undefined, round: boolean = true): number {
+    static ratioToPercent(ratio: number | null | undefined, round: boolean = true): number | null {
         if (ratio === null || ratio === undefined || isNaN(ratio)) {
-            return 0;
+            return null;
         }
 
         const percent = ratio * 100;

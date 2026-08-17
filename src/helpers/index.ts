@@ -4,6 +4,7 @@
  */
 
 export * from './messages';
+export * from './constants';
 export * from './CurrencyHelper';
 export * from './DateHelper';
 export * from './ProgressHelper';

@@ -10,9 +10,13 @@ describe('CurrencyHelper (formatCurrency 위임으로 축소됨)', () => {
     expect(CurrencyHelper.formatUSD(1999.5)).toBe('$1,999.5');
   });
 
-  it('null/undefined 는 "-" 를 반환한다', () => {
-    expect(CurrencyHelper.formatKRW(null)).toBe('-');
-    expect(CurrencyHelper.formatKRW(undefined)).toBe('-');
+  it('null/undefined 는 em dash("—")를 반환한다 — 0과 구분되는 "값 없음" 표기', () => {
+    expect(CurrencyHelper.formatKRW(null)).toBe('—');
+    expect(CurrencyHelper.formatKRW(undefined)).toBe('—');
+  });
+
+  it('0은 "값 없음"과 구분되어 그대로 표기된다', () => {
+    expect(CurrencyHelper.formatKRW(0)).toBe('₩0');
   });
 
   it('formatCurrency 는 KRW 에서 소수점을 반올림한다', () => {

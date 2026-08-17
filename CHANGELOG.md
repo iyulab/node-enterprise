@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.10.0
+
+### Changed
+
+- **`ProgressHelper.validateProgress`/`ratioToPercent` now return `number | null` instead of
+  folding a missing input into `0`.** "No value yet" and "0% progress" are different facts and
+  were rendering identically. A call site that already narrows its input to a definite `number`
+  keeps getting a definite `number` back (an overload preserves this); a call site that may pass
+  `null`/`undefined` now has to handle a `null` result explicitly.
+- **`CurrencyHelper.formatCurrency`, `DateHelper.formatDate`/`formatLocalDate`/`formatDateTime`,
+  and `UrgencyHelper.formatDaysRemaining` now render a missing value as an em dash (`—`) instead
+  of a hyphen (`-`).** The two glyphs looked almost identical but meant different things; the
+  empty-value string is now one shared constant (`EMPTY_VALUE_DISPLAY`, exported from
+  `@iyulab/enterprise`) instead of eight independent hardcoded literals across the four helpers.
+
 ## 0.9.1
 
 ### Fixed

@@ -1,4 +1,5 @@
 import { messages } from './messages';
+import { EMPTY_VALUE_DISPLAY } from './constants';
 
 /**
  * Urgency level types
@@ -120,7 +121,7 @@ export class UrgencyHelper {
      */
     static formatDaysRemaining(daysRemaining: number | null | undefined): string {
         if (daysRemaining === null || daysRemaining === undefined) {
-            return '-';
+            return EMPTY_VALUE_DISPLAY;
         }
 
         if (daysRemaining < 0) {
