@@ -116,12 +116,13 @@ export interface ODataService {
 
   /** custom REST GET — 204 등 빈 바디를 안전 파싱. */
   apiGet<T>(path: string): Promise<T>
-  /** custom REST POST. */
+  /** custom REST POST. `body`가 `FormData` 인스턴스면 그대로(직렬화 없이) 멀티파트로
+   *  전송된다 — `@iyulab/http-client`가 Content-Type을 브라우저 자동 설정에 맡기고
+   *  JSON 직렬화 분기를 타지 않는다. `apiPut`/`apiPatch`도 동일하게 동작한다. */
   apiPost<T>(path: string, body?: unknown): Promise<T>
-  /** custom REST PUT(리소스 전체 교체/생성). `body`가 `FormData`면 자동으로 멀티파트로 전송된다
-   *  (`@iyulab/http-client`가 Content-Type을 브라우저에 맡긴다 — `apiPost`/`apiPatch`도 동일). */
+  /** custom REST PUT(리소스 전체 교체/생성). `body`의 `FormData` 처리는 `apiPost` 참조. */
   apiPut<T>(path: string, body?: unknown): Promise<T>
-  /** custom REST PATCH. */
+  /** custom REST PATCH. `body`의 `FormData` 처리는 `apiPost` 참조. */
   apiPatch<T>(path: string, body?: unknown): Promise<T>
   /** custom REST DELETE — 대부분 204 No Content. */
   apiDelete<T = void>(path: string): Promise<T>
