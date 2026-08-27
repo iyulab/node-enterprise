@@ -6,6 +6,8 @@ interface Recorded {
   url: string
   method: string
   body?: string
+  rawBody?: BodyInit
+  contentType?: string | null
 }
 let recorded: Recorded[] = []
 let queue: Response[] = []
@@ -28,6 +30,8 @@ beforeEach(() => {
       url: String(input),
       method: (init?.method ?? 'GET').toUpperCase(),
       body: typeof init?.body === 'string' ? init.body : undefined,
+      rawBody: init?.body as BodyInit | undefined,
+      contentType: init?.headers ? new Headers(init.headers).get('Content-Type') : null,
     })
     const res = queue.shift()
     if (!res) throw new Error(`no queued response for ${String(input)}`)
@@ -193,4 +197,32 @@ describe('createODataService — custom REST', () => {
     const svc = createODataService({ baseUrl: BASE })
     expect(svc.ApiError).toBe(ApiError)
   })
+
+  it('apiPut sends a PUT with a JSON-serialized body', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ id: 1 }))
+    await svc.apiPut('orders/1', { status: 'shipped' })
+    expect(recorded[0].method).toBe('PUT')
+    expect(recorded[0].url).toBe(`${BASE}/api/orders/1`)
+    expect(recorded[0].body).toBe(JSON.stringify({ status: 'shipped' }))
+    expect(recorded[0].contentType).toContain('application/json')
+  })
+
+  // docket #108 — 요청 본문은 apiPut 부재와 함께 "FormData가 JSON으로 강제 직렬화될 것"이라는
+  // 우려도 제기했다. 실측: @iyulab/http-client의 guessMimeType이 FormData에는 Content-Type을
+  // 세팅하지 않고(브라우저가 멀티파트 boundary와 함께 자동 설정) JSON.stringify 분기도
+  // Content-Type이 application/json일 때만 타므로, apiPost/apiPatch/apiPut 전부 FormData를
+  // 이미 있는 그대로(직렬화 없이) 전달한다 — 별도 코드 추가가 필요 없었다.
+  it.each(['apiPost', 'apiPut', 'apiPatch'] as const)(
+    '%s passes a FormData body through untouched (no JSON.stringify, no forced Content-Type)',
+    async (method) => {
+      const svc = createODataService({ baseUrl: BASE })
+      enqueue(json({ ok: true }))
+      const form = new FormData()
+      form.append('file', new Blob(['x']), 'x.txt')
+      await svc[method]('uploads/1', form)
+      expect(recorded[0].rawBody).toBe(form)
+      expect(recorded[0].contentType).toBeNull()
+    },
+  )
 })

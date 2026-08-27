@@ -118,6 +118,9 @@ export interface ODataService {
   apiGet<T>(path: string): Promise<T>
   /** custom REST POST. */
   apiPost<T>(path: string, body?: unknown): Promise<T>
+  /** custom REST PUT(리소스 전체 교체/생성). `body`가 `FormData`면 자동으로 멀티파트로 전송된다
+   *  (`@iyulab/http-client`가 Content-Type을 브라우저에 맡긴다 — `apiPost`/`apiPatch`도 동일). */
+  apiPut<T>(path: string, body?: unknown): Promise<T>
   /** custom REST PATCH. */
   apiPatch<T>(path: string, body?: unknown): Promise<T>
   /** custom REST DELETE — 대부분 204 No Content. */
@@ -296,6 +299,12 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     return parseJsonBody<T>(res)
   }
 
+  async function apiPut<T>(path: string, body?: unknown): Promise<T> {
+    const res = await client.put(apiUrl(path), body ?? {})
+    await throwIfError(res)
+    return parseJsonBody<T>(res)
+  }
+
   async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
     const res = await client.patch(apiUrl(path), body ?? {})
     await throwIfError(res)
@@ -326,6 +335,7 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     odataDelete,
     apiGet,
     apiPost,
+    apiPut,
     apiPatch,
     apiDelete,
     fetchRaw,
