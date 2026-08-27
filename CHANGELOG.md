@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.10.1
+
+### Added
+
+- **`ODataService` gained `apiPut<T>(path, body?)`.** The other three custom-REST verbs
+  (`apiGet`/`apiPost`/`apiPatch`/`apiDelete`) were already there; `PUT` was the one missing member
+  of that set, even though the underlying `@iyulab/http-client` `HttpClient` has always had `.put()`.
+  A consumer whose backend models "replace this resource" as `PUT` had no way to reach it through
+  this wrapper. Passing a `FormData` body to `apiPost`/`apiPut`/`apiPatch` already worked before this
+  change and needed no fix — `HttpClient` never forces JSON serialization on it and lets the browser
+  set the multipart boundary itself.
+
 ## 0.10.0
 
 ### Changed
