@@ -95,9 +95,21 @@ export const svc = createODataService({
 
 await svc.odataGet<Order>('Orders', { $top: '20' })   // value 배열 언랩
 await svc.odataPost<Order>('Orders', { name: 'A', note: '' })  // '' → null 정규화 + 성공 토스트
-await svc.apiDelete('orders/7')                        // 204 안전
 svc.odataUrl('Orders')                                 // flex-table useODataSource 엔드포인트
 svc.sourceDefaults                                     // { baseUrl, onUnauthorized } 주입용
+
+// custom REST — GET/POST/PUT/PATCH/DELETE 전부, 204 빈 바디 안전 파싱 포함
+await svc.apiGet<Order>('reports/summary')
+await svc.apiPost<Order>('orders', { name: 'A' })
+await svc.apiPut<Order>('orders/7', { name: 'A (revised)' })    // 리소스 전체 교체
+await svc.apiPatch<Order>('orders/7', { note: 'urgent' })
+await svc.apiDelete('orders/7')                                 // 204 안전
+
+// body가 FormData 인스턴스면 그대로(직렬화 없이) 멀티파트로 전송된다 —
+// Content-Type은 브라우저가 boundary와 함께 자동 설정한다. apiPost/apiPut/apiPatch 전부 동일.
+const form = new FormData()
+form.append('file', file)
+await svc.apiPost<Order>('orders/7/attachments', form)
 ```
 
 주입 항목:
