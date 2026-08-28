@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { CurrencyHelper } from '../src/helpers/CurrencyHelper';
 
 describe('CurrencyHelper (formatCurrency 위임으로 축소됨)', () => {
@@ -26,5 +26,32 @@ describe('CurrencyHelper (formatCurrency 위임으로 축소됨)', () => {
   it('parseCurrency 는 통화 기호·구분자를 제거하고 숫자로 되돌린다', () => {
     expect(CurrencyHelper.parseCurrency('₩550,000')).toBe(550000);
     expect(CurrencyHelper.parseCurrency('')).toBe(0);
+  });
+});
+
+describe('CurrencyHelper deprecation 경고 — 프로세스당 1회', () => {
+  it('formatCurrency(및 그 위임 경로인 formatKRW 등)를 처음 호출하면 console.warn 1회', async () => {
+    vi.resetModules();
+    const { CurrencyHelper: FreshCurrencyHelper } = await import('../src/helpers/CurrencyHelper');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    FreshCurrencyHelper.formatKRW(1000);
+    FreshCurrencyHelper.formatUSD(1000);
+    FreshCurrencyHelper.formatCurrency(1000);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0][0]).toContain('CurrencyHelper');
+    warnSpy.mockRestore();
+  });
+
+  it('parseCurrency는 formatCurrency 계열이 아니라 경고를 내지 않는다', async () => {
+    vi.resetModules();
+    const { CurrencyHelper: FreshCurrencyHelper } = await import('../src/helpers/CurrencyHelper');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    FreshCurrencyHelper.parseCurrency('₩1,000');
+
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 });

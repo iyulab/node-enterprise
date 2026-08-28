@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.2
+
+### Changed
+
+- **`CurrencyHelper` now logs a one-time `console.warn`** (per process) the first time any of its
+  `format*` methods (`formatCurrency`/`formatKRW`/`formatUSD`/`formatEUR`/`formatJPY`/`formatCNY`)
+  is called, pointing callers to `formatCurrency`/`formatNumber`/`formatDate` from
+  `@iyulab/components` directly. `parseCurrency` is unaffected (no equivalent exists elsewhere yet).
+  No behavior change — this is usage telemetry ahead of a future removal, not a functional change.
+
 ## 0.10.1
 
 ### Added

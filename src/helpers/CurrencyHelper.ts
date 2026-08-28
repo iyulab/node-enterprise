@@ -1,6 +1,18 @@
 import { formatCurrency as formatCurrencyBase } from '@iyulab/components/dist/utilities/format.js';
 import { EMPTY_VALUE_DISPLAY } from './constants';
 
+let warnedCurrencyHelperDeprecated = false;
+
+function warnCurrencyHelperDeprecatedOnce(): void {
+  if (warnedCurrencyHelperDeprecated) return;
+  warnedCurrencyHelperDeprecated = true;
+  console.warn(
+    '[@iyulab/enterprise] "CurrencyHelper" is deprecated and will be removed in a future ' +
+      'major version. Use `formatCurrency`/`formatNumber`/`formatDate` from `@iyulab/components` ' +
+      'directly instead. This warning fires once per process.',
+  );
+}
+
 /**
  * Currency formatting utility class.
  *
@@ -22,6 +34,7 @@ export class CurrencyHelper {
     currency: string = 'KRW',
     locale: string = 'ko-KR'
   ): string {
+    warnCurrencyHelperDeprecatedOnce();
     if (amount === null || amount === undefined) return EMPTY_VALUE_DISPLAY;
 
     return formatCurrencyBase(amount, currency, {
