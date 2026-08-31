@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.11.0
+
+### Added
+
+- **`ODataService.odataPatchQuiet`/`odataDeleteQuiet`** — quiet counterparts to
+  `odataPatch`/`odataDelete`, mirroring the existing `odataPost`/`odataPostQuiet`
+  split. For an action that fires more than one mutation in response to a single
+  user click (e.g. editing a row and syncing a denormalized parent field), the
+  toasting variants would show a toast per mutation; the quiet variants do the
+  request and error handling without one, so the caller can toast once for the
+  whole action. Previously PATCH/DELETE had no quiet path, forcing a raw
+  `fetch()` that lost 401 handling and `ApiError` extraction.
+
 ## 0.10.2
 
 ### Changed
