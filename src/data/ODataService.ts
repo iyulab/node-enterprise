@@ -109,8 +109,13 @@ export interface ODataService {
   odataPostQuiet<T>(entity: string, body: Partial<T>): Promise<T>
   /** OData POST(생성) — 성공 시 `saved` 토스트. */
   odataPost<T>(entity: string, body: Partial<T>): Promise<T>
+  /** OData PATCH(수정) — 토스트 없이 결과만(자식 컬렉션 편집 후 부모의 파생 필드를
+   *  함께 동기화하는 등, 한 사용자 액션이 여러 mutation을 낼 때 토스트 폭주 방지). */
+  odataPatchQuiet<T>(entity: string, id: string, body: Partial<T>): Promise<void>
   /** OData PATCH(수정) — 성공 시 `updated` 토스트. */
   odataPatch<T>(entity: string, id: string, body: Partial<T>): Promise<void>
+  /** OData DELETE — 토스트 없이(`odataPatchQuiet`와 같은 이유). */
+  odataDeleteQuiet(entity: string, id: string): Promise<void>
   /** OData DELETE — 성공 시 `deleted` 토스트. */
   odataDelete(entity: string, id: string): Promise<void>
 
@@ -257,32 +262,40 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     }
   }
 
-  async function odataPatch<T>(entity: string, id: string, body: Partial<T>): Promise<void> {
+  async function odataPatchQuiet<T>(entity: string, id: string, body: Partial<T>): Promise<void> {
     const res = await client.patch(`${odataUrl(entity)}(${id})`, normalizeBody(body))
-    if (!res.ok) {
-      if (res.status === 401) {
-        config.onUnauthorized?.(401)
-        throw new ApiError(messages.sessionExpired, 401)
+    await throwIfError(res)
+  }
+
+  async function odataPatch<T>(entity: string, id: string, body: Partial<T>): Promise<void> {
+    try {
+      await odataPatchQuiet<T>(entity, id, body)
+      notifySuccess?.(messages.updated)
+    } catch (e) {
+      // 401(세션 만료)은 onUnauthorized 가 이미 안내함 — 중복 토스트 방지.
+      if (!(e instanceof ApiError && e.status === 401)) {
+        notifyError?.(e instanceof Error ? e.message : messages.requestFailed)
       }
-      const msg = await extractErrorMsg(res)
-      notifyError?.(msg)
-      throw new ApiError(msg, res.status)
+      throw e
     }
-    notifySuccess?.(messages.updated)
+  }
+
+  async function odataDeleteQuiet(entity: string, id: string): Promise<void> {
+    const res = await client.delete(`${odataUrl(entity)}(${id})`)
+    await throwIfError(res)
   }
 
   async function odataDelete(entity: string, id: string): Promise<void> {
-    const res = await client.delete(`${odataUrl(entity)}(${id})`)
-    if (!res.ok) {
-      if (res.status === 401) {
-        config.onUnauthorized?.(401)
-        throw new ApiError(messages.sessionExpired, 401)
+    try {
+      await odataDeleteQuiet(entity, id)
+      notifySuccess?.(messages.deleted)
+    } catch (e) {
+      // 401(세션 만료)은 onUnauthorized 가 이미 안내함 — 중복 토스트 방지.
+      if (!(e instanceof ApiError && e.status === 401)) {
+        notifyError?.(e instanceof Error ? e.message : messages.requestFailed)
       }
-      const msg = await extractErrorMsg(res)
-      notifyError?.(msg)
-      throw new ApiError(msg, res.status)
+      throw e
     }
-    notifySuccess?.(messages.deleted)
   }
 
   async function apiGet<T>(path: string): Promise<T> {
@@ -332,7 +345,9 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     odataCount,
     odataPostQuiet,
     odataPost,
+    odataPatchQuiet,
     odataPatch,
+    odataDeleteQuiet,
     odataDelete,
     apiGet,
     apiPost,

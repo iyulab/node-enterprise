@@ -119,6 +119,35 @@ describe('createODataService — mutations + toasts', () => {
     await svc.odataDelete('Orders', '7')
     expect(success).toHaveBeenCalledWith('삭제되었습니다')
   })
+
+  // §D-33 / ISSUE-enterprise-20260812-odataservice-missing-quiet-patch-delete:
+  // odataPostQuiet은 이미 있는데 PATCH/DELETE에는 quiet 짝이 없어, 자식 컬렉션을
+  // 편집하고 부모의 파생 필드를 동기화하는 한 사용자 액션이 토스트 두 번을 내는
+  // 문제를 피할 방법이 raw fetch() 우회뿐이었다.
+  it('odataPatchQuiet does not toast on success', async () => {
+    const success = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, notify: { success } })
+    enqueue(new Response(null, { status: 204 }))
+    await svc.odataPatchQuiet('Orders', '7', { name: 'b' })
+    expect(success).not.toHaveBeenCalled()
+    expect(recorded[0].url).toBe(`${BASE}/$data/Orders(7)`)
+  })
+
+  it('odataDeleteQuiet does not toast on success', async () => {
+    const success = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, notify: { success } })
+    enqueue(new Response(null, { status: 204 }))
+    await svc.odataDeleteQuiet('Orders', '7')
+    expect(success).not.toHaveBeenCalled()
+    expect(recorded[0].url).toBe(`${BASE}/$data/Orders(7)`)
+  })
+
+  it('odataPatchQuiet normalizes empty strings to null, same as odataPatch', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(new Response(null, { status: 204 }))
+    await svc.odataPatchQuiet('Orders', '7', { name: 'b', note: '' })
+    expect(JSON.parse(recorded[0].body!)).toEqual({ name: 'b', note: null })
+  })
 })
 
 describe('createODataService — errors', () => {
@@ -149,6 +178,57 @@ describe('createODataService — errors', () => {
       message: '세션이 만료되었습니다',
     })
     expect(onUnauthorized).toHaveBeenCalledWith(401)
+    expect(error).not.toHaveBeenCalled()
+  })
+
+  // odataPatch/odataDelete는 이전에 throwIfError를 쓰지 않고 401/에러 처리를 각자
+  // 인라인으로 중복 구현하고 있었다 — quiet 짝을 추가하며 throwIfError 재사용으로
+  // 리팩터(§D-33) 했으므로, 그 리팩터가 기존 동작(에러 토스트·401 처리)을 그대로
+  // 보존하는지 PATCH/DELETE 각각으로 직접 확인한다(이전엔 POST로만 커버돼 있었다).
+  it('odataPatch non-401 error fires error toast and throws ApiError with status', async () => {
+    const error = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, notify: { error } })
+    enqueue(json({ error: { message: '중복된 이름' } }, 409))
+    await expect(svc.odataPatch('Orders', '7', { name: 'a' })).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 409,
+      message: '중복된 이름',
+    })
+    expect(error).toHaveBeenCalledWith('중복된 이름')
+  })
+
+  it('odataDelete 401 calls onUnauthorized, throws sessionExpired, and does NOT fire an error toast', async () => {
+    const onUnauthorized = vi.fn()
+    const error = vi.fn()
+    const svc = createODataService({
+      baseUrl: BASE,
+      onUnauthorized,
+      notify: { error },
+      messages: { sessionExpired: '세션이 만료되었습니다' },
+    })
+    enqueue(new Response(null, { status: 401 }))
+    await expect(svc.odataDelete('Orders', '7')).rejects.toMatchObject({
+      status: 401,
+      message: '세션이 만료되었습니다',
+    })
+    expect(onUnauthorized).toHaveBeenCalledWith(401)
+    expect(error).not.toHaveBeenCalled()
+  })
+
+  it('odataPatchQuiet/odataDeleteQuiet propagate errors without notifying', async () => {
+    const error = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, notify: { error } })
+
+    enqueue(json({ error: { message: '중복된 이름' } }, 409))
+    await expect(svc.odataPatchQuiet('Orders', '7', { name: 'a' })).rejects.toMatchObject({
+      status: 409,
+    })
+    expect(error).not.toHaveBeenCalled()
+
+    enqueue(json({ error: { message: '삭제 불가' } }, 409))
+    await expect(svc.odataDeleteQuiet('Orders', '7')).rejects.toMatchObject({
+      status: 409,
+    })
     expect(error).not.toHaveBeenCalled()
   })
 
