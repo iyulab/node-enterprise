@@ -147,8 +147,16 @@ const user = await auth.fetchMe()   // null → 미인증(로그인 화면)
 if (hasPermission('orders.write')) { /* 저장 버튼 노출 */ }
 ```
 
+주입 항목(위 예시가 쓴 것 외 나머지):
+
+| config | 용도 |
+|--------|------|
+| `baseUrl` | 상대 URL 앞에 붙일 오리진 (기본 `''` = same-origin) |
+| `credentials` | fetch `credentials` 모드 (기본 `'same-origin'` — 쿠키 세션) |
+| `extractLoginError` | 로그인 실패(non-401) 응답 바디에서 서버 메시지 추출 오버라이드 (기본: `body.Message ?? body.message`) |
+| `permissionStore` | 권한 자동 갱신 대상 store (기본 `defaultPermissionStore`) — 격리가 필요하면 `createPermissionStore()`로 별도 store를 만들어 주입 |
+
 - `fetchMe()` 는 401/네트워크 오류 시 `null` — 이 신호가 로그인 게이트를 구동한다(라이브러리가 리다이렉트하지 않음).
-- 격리가 필요하면 `createPermissionStore()` 로 별도 store 를 만들어 `permissionStore` 로 주입한다.
 - 도메인 판정(`isPortalUser` 등)·권한 코드 상수는 라이브러리가 아니라 앱 adapter 에 둔다.
 
 ### 도메인 헬퍼
