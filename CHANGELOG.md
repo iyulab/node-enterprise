@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.1
+
+### Fixed
+
+- **`createAuthClient`'s README section documented only 4 of `AuthClientConfig`'s
+  7 fields** — `baseUrl`, `credentials`, and `extractLoginError` had no mention
+  anywhere (only `permissionStore` was covered, in prose). Added a config table
+  matching the one already used for `createODataService`.
+
 ## 0.11.0
 
 ### Added
