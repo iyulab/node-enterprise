@@ -163,6 +163,36 @@ describe('createODataService — errors', () => {
     expect(error).toHaveBeenCalledWith('중복된 이름')
   })
 
+  it('OData v4 오류 봉투의 error.details(필드별 검증 상세)를 ApiError.details로 그대로 실어 던진다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(
+      json(
+        {
+          error: {
+            code: '',
+            message: 'Name: The 역할 코드 field is required.',
+            details: [{ code: '', message: 'The 역할 코드 field is required.', target: 'Name' }],
+          },
+        },
+        400,
+      ),
+    )
+    await expect(svc.odataPost('Orders', { name: '' })).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 400,
+      details: [{ code: '', message: 'The 역할 코드 field is required.', target: 'Name' }],
+    })
+  })
+
+  it('error.details가 없는 응답은 ApiError.details가 undefined다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ error: { message: '중복된 이름' } }, 409))
+    await expect(svc.odataPost('Orders', { name: 'a' })).rejects.toMatchObject({
+      name: 'ApiError',
+      details: undefined,
+    })
+  })
+
   it('401 calls onUnauthorized, throws sessionExpired, and does NOT fire an error toast', async () => {
     const onUnauthorized = vi.fn()
     const error = vi.fn()

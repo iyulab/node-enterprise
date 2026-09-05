@@ -18,16 +18,26 @@
 import { HttpClient, type HttpResponse } from '@iyulab/http-client'
 import buildQuery from 'odata-query'
 
+/** OData v4 오류 봉투의 `error.details` 항목 — 필드별 검증 실패 상세. */
+export interface ApiErrorDetail {
+  code: string
+  message: string
+  target: string
+}
+
 /**
  * API 호출 실패 에러 — HTTP status 를 실어 호출부가 상태별 분기(예: 404 도메인 문구)를 할 수 있게 한다.
  * `Error` 를 상속하므로 기존 `e instanceof Error`/`e.message` 소비처는 그대로 동작한다.
  */
 export class ApiError extends Error {
   readonly status: number
-  constructor(message: string, status: number) {
+  /** OData v4 오류 봉투의 `error.details`(필드별 검증 상세) — 서버 응답에 없거나 파싱 실패면 undefined. */
+  readonly details?: ApiErrorDetail[]
+  constructor(message: string, status: number, details?: ApiErrorDetail[]) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.details = details
   }
 }
 
@@ -187,26 +197,30 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     return `${baseUrl}/${apiPrefix}/${clean}`
   }
 
-  /** OData 응답에서 사용자 친화적 에러 메시지 추출. */
-  async function extractErrorMsg(res: HttpResponse): Promise<string> {
+  /** OData 응답에서 사용자 친화적 에러 메시지 + 구조화된 필드별 상세를 추출. */
+  async function extractErrorInfo(
+    res: HttpResponse,
+  ): Promise<{ message: string; details?: ApiErrorDetail[] }> {
     let body: Record<string, unknown> | undefined
     try {
       body = await res.json<Record<string, unknown>>()
     } catch {
       body = undefined
     }
+    const errorObj = body?.error as Record<string, unknown> | undefined
     // OData 는 error.message(lowercase), 커스텀 REST 는 최상위 Message(PascalCase) 컨벤션을 함께 지원.
-    const rawVal =
-      (body?.error as Record<string, unknown> | undefined)?.message ?? body?.message ?? body?.Message
+    const rawVal = errorObj?.message ?? body?.message ?? body?.Message
     const rawMessage = typeof rawVal === 'string' ? rawVal : undefined
+    // OData v4 오류 봉투의 error.details(필드별 검증 상세) — 있으면 그대로 실어 보낸다(재파싱 없음).
+    const details = Array.isArray(errorObj?.details) ? (errorObj.details as ApiErrorDetail[]) : undefined
 
     if (config.formatError) {
       const m = config.formatError({ status: res.status, statusText: res.statusText, rawMessage, body })
-      if (m) return m
+      if (m) return { message: m, details }
     }
     // 너무 긴 raw 메시지(서버 내부 스택 등)는 노출하지 않고 친화 메시지로 대체.
-    if (rawMessage && rawMessage.length <= 200) return rawMessage
-    return messages.http[res.status] ?? `${messages.requestFailed} (${res.status})`
+    if (rawMessage && rawMessage.length <= 200) return { message: rawMessage, details }
+    return { message: messages.http[res.status] ?? `${messages.requestFailed} (${res.status})`, details }
   }
 
   /** 에러 확인 후 throw. 401 은 onUnauthorized 통지 후 세션 만료 에러로 단락. */
@@ -216,7 +230,8 @@ export function createODataService(config: ODataServiceConfig): ODataService {
       config.onUnauthorized?.(401)
       throw new ApiError(messages.sessionExpired, 401)
     }
-    throw new ApiError(await extractErrorMsg(res), res.status)
+    const { message, details } = await extractErrorInfo(res)
+    throw new ApiError(message, res.status, details)
   }
 
   async function odataGet<T>(entity: string, params?: Record<string, string>): Promise<T[]> {
