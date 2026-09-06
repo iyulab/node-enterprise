@@ -233,6 +233,38 @@ describe('createODataService — errors', () => {
     })
   })
 
+  it('formatError 콜백이 검증된 details를 함께 받는다', async () => {
+    const formatError = vi.fn(() => '입력값을 확인하세요')
+    const svc = createODataService({ baseUrl: BASE, formatError })
+    enqueue(
+      json(
+        {
+          error: {
+            message: 'Validation failed',
+            details: [{ code: 'ValidationError', message: 'required', target: 'Name' }],
+          },
+        },
+        400,
+      ),
+    )
+    await expect(svc.odataPost('Orders', {})).rejects.toMatchObject({ message: '입력값을 확인하세요' })
+    expect(formatError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 400,
+        rawMessage: 'Validation failed',
+        details: [{ code: 'ValidationError', message: 'required', target: 'Name' }],
+      }),
+    )
+  })
+
+  it('details가 없으면 formatError의 info.details도 undefined다', async () => {
+    const formatError = vi.fn(() => undefined)
+    const svc = createODataService({ baseUrl: BASE, formatError })
+    enqueue(json({ error: { message: '중복된 이름' } }, 409))
+    await expect(svc.odataPost('Orders', { name: 'a' })).rejects.toMatchObject({ message: '중복된 이름' })
+    expect(formatError).toHaveBeenCalledWith(expect.objectContaining({ details: undefined }))
+  })
+
   it('401 calls onUnauthorized, throws sessionExpired, and does NOT fire an error toast', async () => {
     const onUnauthorized = vi.fn()
     const error = vi.fn()

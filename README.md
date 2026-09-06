@@ -121,7 +121,7 @@ await svc.apiPost<Order>('orders/7/attachments', form)
 | `onUnauthorized(status)` | 401 시 호출 — 리다이렉트/재진입 가드는 앱이 처리 |
 | `notify.success/error` | 토스트 훅 (생략 시 토스트 없음 — 순수) |
 | `messages` | 사용자 대면 문구 (기본 영어, 지정 키만 대체) |
-| `formatError(info)` | 에러 메시지 포매팅 오버라이드 (앱별 정책) |
+| `formatError(info)` | 에러 메시지 포매팅 오버라이드 (앱별 정책) — `info` 는 `status`/`statusText`/`rawMessage`/`details`(검증된 `error.details`)/`body` 를 받는다 |
 
 > 도메인 액션(상태 전이 등)·엔티티 목록·권한 코드는 라이브러리에 넣지 말고 앱 adapter 에 둔다.
 

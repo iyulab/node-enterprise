@@ -122,6 +122,8 @@ export interface ODataServiceConfig {
     status: number
     statusText: string
     rawMessage?: string
+    /** OData v4 `error.details` — 검증을 마친 항목만 실린다(`ApiError.details` 와 같은 값). */
+    details?: ApiErrorDetail[]
     body?: unknown
   }) => string | undefined
 }
@@ -238,7 +240,7 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     const details = extractErrorDetails(errorObj?.details)
 
     if (config.formatError) {
-      const m = config.formatError({ status: res.status, statusText: res.statusText, rawMessage, body })
+      const m = config.formatError({ status: res.status, statusText: res.statusText, rawMessage, details, body })
       if (m) return { message: m, details }
     }
     // 너무 긴 raw 메시지(서버 내부 스택 등)는 노출하지 않고 친화 메시지로 대체.

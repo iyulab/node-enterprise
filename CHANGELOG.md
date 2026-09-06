@@ -15,6 +15,12 @@
     `message` and MAY have `target`, so `target` is optional on `ApiErrorDetail`
     and entries that lack a string `code`/`message` are dropped; when nothing
     usable remains `details` is `undefined` rather than an empty array.
+- **`formatError(info)` now receives `details`** — the callback that shapes the
+  user-facing message previously got only `rawMessage` and the raw `body`, so an
+  app wanting to summarize per-field failures had to re-dig and re-validate the
+  same `error.details` the service had just parsed. `info` now carries the
+  validated array alongside the derived `rawMessage` it already had. Purely
+  additive to a callback input: existing implementations ignore the new field.
 
 ## 0.11.1
 
