@@ -18,11 +18,34 @@
 import { HttpClient, type HttpResponse } from '@iyulab/http-client'
 import buildQuery from 'odata-query'
 
-/** OData v4 오류 봉투의 `error.details` 항목 — 필드별 검증 실패 상세. */
+/**
+ * OData v4 오류 봉투의 `error.details` 항목 — 필드별 검증 실패 상세.
+ *
+ * 규격(OData JSON Format v4.0)상 각 항목은 `code`/`message` 를 **반드시** 갖고
+ * `target`(오류가 난 속성 이름)은 **선택**이다 — 필수로 선언하면 target 을 생략한
+ * 서버 응답에서 타입이 거짓말을 하게 된다.
+ */
 export interface ApiErrorDetail {
   code: string
   message: string
-  target: string
+  target?: string
+}
+
+/**
+ * `error.details` 를 검증해 추출한다 — 규격이 요구하는 형태(`code`/`message` 둘 다 문자열)를
+ * 갖춘 항목만 남긴다. 이 파일이 `error.message` 에 이미 적용하는 규칙(`typeof === "string"` 을
+ * 확인한 뒤 사용)과 같은 이유다: 검증 없이 캐스팅하면 타입만 맞고 런타임에 호출부가 깨진다.
+ * 쓸 수 있는 항목이 하나도 없으면 undefined 로 정규화한다 — 빈 배열을 주면 호출부의
+ * `if (e.details)` 가 참이 되어 "상세가 있다"고 오해한다.
+ */
+function extractErrorDetails(raw: unknown): ApiErrorDetail[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const details = raw.filter((d): d is ApiErrorDetail => {
+    if (typeof d !== "object" || d === null) return false
+    const rec = d as Record<string, unknown>
+    return typeof rec.code === "string" && typeof rec.message === "string"
+  })
+  return details.length > 0 ? details : undefined
 }
 
 /**
@@ -211,8 +234,8 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     // OData 는 error.message(lowercase), 커스텀 REST 는 최상위 Message(PascalCase) 컨벤션을 함께 지원.
     const rawVal = errorObj?.message ?? body?.message ?? body?.Message
     const rawMessage = typeof rawVal === 'string' ? rawVal : undefined
-    // OData v4 오류 봉투의 error.details(필드별 검증 상세) — 있으면 그대로 실어 보낸다(재파싱 없음).
-    const details = Array.isArray(errorObj?.details) ? (errorObj.details as ApiErrorDetail[]) : undefined
+    // OData v4 오류 봉투의 error.details(필드별 검증 상세) — 이미 파싱된 값을 검증만 해서 싣는다.
+    const details = extractErrorDetails(errorObj?.details)
 
     if (config.formatError) {
       const m = config.formatError({ status: res.status, statusText: res.statusText, rawMessage, body })

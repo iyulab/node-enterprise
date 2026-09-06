@@ -184,6 +184,46 @@ describe('createODataService — errors', () => {
     })
   })
 
+  it('규격상 선택 항목인 target이 없어도 detail을 그대로 싣는다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(
+      json(
+        { error: { code: 'ValidationError', message: 'bad', details: [{ code: 'ValidationError', message: 'required' }] } },
+        400,
+      ),
+    )
+    await expect(svc.odataPost('Orders', {})).rejects.toMatchObject({
+      details: [{ code: 'ValidationError', message: 'required' }],
+    })
+  })
+
+  it('규격이 요구하는 code/message가 없는 항목은 걸러내고, 남는 항목이 없으면 undefined다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(
+      json(
+        {
+          error: {
+            message: 'bad',
+            details: [{ code: 'A', message: 'keep' }, { target: 'Name' }, null, 'nope', { code: 1, message: 2 }],
+          },
+        },
+        400,
+      ),
+    )
+    await expect(svc.odataPost('Orders', {})).rejects.toMatchObject({
+      details: [{ code: 'A', message: 'keep' }],
+    })
+
+    enqueue(json({ error: { message: 'bad', details: [{ target: 'Name' }] } }, 400))
+    await expect(svc.odataPost('Orders', {})).rejects.toMatchObject({ details: undefined })
+  })
+
+  it('details가 배열이 아니면 undefined다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ error: { message: 'bad', details: { code: 'A', message: 'not an array' } } }, 400))
+    await expect(svc.odataPost('Orders', {})).rejects.toMatchObject({ details: undefined })
+  })
+
   it('error.details가 없는 응답은 ApiError.details가 undefined다', async () => {
     const svc = createODataService({ baseUrl: BASE })
     enqueue(json({ error: { message: '중복된 이름' } }, 409))
