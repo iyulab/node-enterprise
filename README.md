@@ -18,7 +18,7 @@ npm install @iyulab/enterprise
 | `FormRow` | React | 2컬럼 그리드 폼 행(`full`로 1컬럼) |
 | `ApiConfig` | class | baseUrl/OData·API prefix·dev 판별 중앙 설정 |
 | `createODataService` | factory | OData v4 + custom REST CRUD 서비스(401·토스트·에러파싱) |
-| `ApiError` | class | HTTP status 를 실은 API 호출 실패 에러 |
+| `ApiError` | class | HTTP status + OData `error.details`(필드별 검증 상세)를 실은 API 호출 실패 에러 |
 | `createAuthClient` | factory | 쿠키 세션 인증(fetchMe/login/logout) — 제네릭 user/자격증명 |
 | `createPermissionStore` · `hasPermission` 외 | store | 권한 스냅샷 store + 판정 free 함수 |
 | `CurrencyHelper` | class | 통화 포맷(`formatKRW` 등) |
@@ -124,6 +124,30 @@ await svc.apiPost<Order>('orders/7/attachments', form)
 | `formatError(info)` | 에러 메시지 포매팅 오버라이드 (앱별 정책) |
 
 > 도메인 액션(상태 전이 등)·엔티티 목록·권한 코드는 라이브러리에 넣지 말고 앱 adapter 에 둔다.
+
+#### 실패 응답 — `ApiError`
+
+모든 메서드는 실패 시 `ApiError`(`Error` 상속)를 던진다. `status` 로 상태별 분기하고,
+서버가 OData v4 오류 봉투에 필드별 검증 상세(`error.details`)를 실어 보내면 `details` 로
+읽어 폼의 필드별 오류 표시에 바로 연결할 수 있다.
+
+```typescript
+try {
+  await svc.odataPost('Roles', draft)
+} catch (e) {
+  if (e instanceof ApiError && e.details) {
+    // [{ code: 'ValidationError', message: 'The Name field is required.', target: 'Name' }, …]
+    for (const d of e.details) markFieldError(d.target, d.message)
+  }
+}
+```
+
+| 필드 | 설명 |
+|------|------|
+| `message` | 사용자 대면 메시지 (`formatError` → 서버 raw → status 폴백 순으로 결정) |
+| `status` | HTTP status |
+| `details` | `error.details` 항목 배열 — 규격상 `code`/`message` 는 필수, `target`(속성 이름)은 선택. 상세가 없거나 규격 형태가 아니면 `undefined` |
+
 
 ### 인증 + 권한 (`createAuthClient` · 권한 store)
 

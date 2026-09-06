@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.12.0
+
+### Added
+
+- **`ApiError.details`** — OData v4 error envelopes carry per-field validation
+  errors in `error.details`, and `ODataService` already parsed that envelope to
+  build `ApiError.message`, but discarded the rest of the same parse. `ApiError`
+  now also carries `details` (`ApiErrorDetail[] | undefined`), so a caller can
+  bind server-side validation failures to the fields that produced them instead
+  of showing one flattened string. Backward compatible: callers that never read
+  `.details` are unaffected.
+  - Per the OData JSON Format v4.0 spec each detail entry MUST have `code` and
+    `message` and MAY have `target`, so `target` is optional on `ApiErrorDetail`
+    and entries that lack a string `code`/`message` are dropped; when nothing
+    usable remains `details` is `undefined` rather than an empty array.
+
 ## 0.11.1
 
 ### Fixed
