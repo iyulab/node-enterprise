@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.0
+
+### Changed
+
+- **`@iyulab/components` is no longer an optional peer dependency.** The main entry imports it
+  unconditionally, so declaring it optional meant a consumer installing this package alone got
+  nothing installed and no warning — the failure surfaced only as a module-not-found at
+  runtime. Consumers already installing it are unaffected.
+
 ## 0.12.0
 
 ### Added
