@@ -4,6 +4,17 @@
 
 ### Changed
 
+- **`FormRow`'s grid tracks are now `minmax(0, 1fr)` rather than `1fr`, so columns declared
+  equal actually render equal.** A grid item's default `min-width: auto` refuses to shrink below
+  its content's min-content width, so one long value in a row was enough to blow out its own
+  column and squeeze the rest. Measured in a 400px container with one long unbreakable string:
+  a two-column row laid out at **425px / 8px** and a three-column row at **425px / 8px / 8px**,
+  and the row overflowed its container. With `minmax(0, 1fr)` the same cases lay out at
+  **196 / 196** and **128 / 128 / 128**. Nothing about the API changes, and rows whose content
+  already fit are unaffected.
+  - Long unbreakable content still overflows its own column — that is a separate axis, handled
+    on the cell with `overflow-wrap` (this package's peer elements already set it).
+
 - **`@iyulab/components` is no longer an optional peer dependency.** The main entry imports it
   unconditionally, so declaring it optional meant a consumer installing this package alone got
   nothing installed and no warning — the failure surfaced only as a module-not-found at
