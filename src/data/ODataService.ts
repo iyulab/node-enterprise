@@ -156,16 +156,28 @@ export interface ODataService {
 
   /** custom REST GET — 204 등 빈 바디를 안전 파싱. */
   apiGet<T>(path: string): Promise<T>
-  /** custom REST POST. `body`가 `FormData` 인스턴스면 그대로(직렬화 없이) 멀티파트로
-   *  전송된다 — `@iyulab/http-client`가 Content-Type을 브라우저 자동 설정에 맡기고
-   *  JSON 직렬화 분기를 타지 않는다. `apiPut`/`apiPatch`도 동일하게 동작한다. */
+  /** custom REST POST — 실패 시 `error` 토스트 후 rethrow(401 제외). `body`가 `FormData`
+   *  인스턴스면 그대로(직렬화 없이) 멀티파트로 전송된다 — `@iyulab/http-client`가
+   *  Content-Type을 브라우저 자동 설정에 맡기고 JSON 직렬화 분기를 타지 않는다.
+   *  `apiPut`/`apiPatch`도 동일하게 동작한다. */
   apiPost<T>(path: string, body?: unknown): Promise<T>
-  /** custom REST PUT(리소스 전체 교체/생성). `body`의 `FormData` 처리는 `apiPost` 참조. */
+  /** custom REST POST — 토스트 없이 결과만(`odataPostQuiet`와 같은 이유: 한 사용자 액션이
+   *  여러 요청을 내거나, 소비자가 자기 래퍼로 이미 통지할 때). */
+  apiPostQuiet<T>(path: string, body?: unknown): Promise<T>
+  /** custom REST PUT(리소스 전체 교체/생성) — 실패 시 `error` 토스트 후 rethrow(401 제외).
+   *  `body`의 `FormData` 처리는 `apiPost` 참조. */
   apiPut<T>(path: string, body?: unknown): Promise<T>
-  /** custom REST PATCH. `body`의 `FormData` 처리는 `apiPost` 참조. */
+  /** custom REST PUT — 토스트 없이 결과만. */
+  apiPutQuiet<T>(path: string, body?: unknown): Promise<T>
+  /** custom REST PATCH — 실패 시 `error` 토스트 후 rethrow(401 제외). `body`의 `FormData`
+   *  처리는 `apiPost` 참조. */
   apiPatch<T>(path: string, body?: unknown): Promise<T>
-  /** custom REST DELETE — 대부분 204 No Content. */
+  /** custom REST PATCH — 토스트 없이 결과만. */
+  apiPatchQuiet<T>(path: string, body?: unknown): Promise<T>
+  /** custom REST DELETE — 실패 시 `error` 토스트 후 rethrow(401 제외). 대부분 204 No Content. */
   apiDelete<T = void>(path: string): Promise<T>
+  /** custom REST DELETE — 토스트 없이 결과만. */
+  apiDeleteQuiet<T = void>(path: string): Promise<T>
 
   /** URL 을 직접 조립한 커스텀 조회(csv-export 등)를 위해 raw 응답을 반환. */
   fetchRaw(url: string): Promise<HttpResponse>
@@ -282,6 +294,32 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     return json['@odata.count'] ?? 0
   }
 
+  /**
+   * 쓰기 실패를 사용자에게 알린 뒤 그대로 다시 던진다.
+   *
+   * 🔴**이 서비스의 통지 축은 «쓰기 ↔ 읽기» 이지 «odata ↔ api» 가 아니다.** 조회
+   * (`odataGet`·`odataGetById`·`odataCount`·`apiGet`·`fetchRaw`)는 어느 쪽도 통지하지
+   * 않는다 — 화면이 비어 있는 것 자체가 신호이고, 목록 조회마다 토스트를 띄우면 읽을 수
+   * 없다. 쓰기는 **결과가 화면에 안 보일 수 있으므로** 통지한다: 서버가 409 와 사유를
+   * 돌려줘도 아무 일도 일어나지 않은 화면과 구별되지 않는다.
+   *
+   * ⚠**401 은 제외한다** — `onUnauthorized` 가 이미 안내하므로 토스트가 겹친다.
+   *
+   * ⚠성공 토스트는 **`odata*` 쓰기에만** 있다. `api*` 는 임의의 RPC(상태 전이·발행·업로드)를
+   * 태우는 경로라 «저장되었습니다» 같은 문구를 우리가 지어낼 수 없다 — 실패 메시지는 서버가
+   * 주므로 어느 엔드포인트에서나 뜻이 통하지만, 성공 문구는 그렇지 않다.
+   */
+  async function notifyingWrite<T>(run: () => Promise<T>): Promise<T> {
+    try {
+      return await run()
+    } catch (e) {
+      if (!(e instanceof ApiError && e.status === 401)) {
+        notifyError?.(e instanceof Error ? e.message : messages.requestFailed)
+      }
+      throw e
+    }
+  }
+
   async function odataPostQuiet<T>(entity: string, body: Partial<T>): Promise<T> {
     const res = await client.post(odataUrl(entity), normalizeBody(body))
     await throwIfError(res)
@@ -289,17 +327,11 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   }
 
   async function odataPost<T>(entity: string, body: Partial<T>): Promise<T> {
-    try {
+    return notifyingWrite(async () => {
       const result = await odataPostQuiet<T>(entity, body)
       notifySuccess?.(messages.saved)
       return result
-    } catch (e) {
-      // 401(세션 만료)은 onUnauthorized 가 이미 안내함 — 중복 토스트 방지.
-      if (!(e instanceof ApiError && e.status === 401)) {
-        notifyError?.(e instanceof Error ? e.message : messages.requestFailed)
-      }
-      throw e
-    }
+    })
   }
 
   async function odataPatchQuiet<T>(entity: string, id: string, body: Partial<T>): Promise<void> {
@@ -308,16 +340,10 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   }
 
   async function odataPatch<T>(entity: string, id: string, body: Partial<T>): Promise<void> {
-    try {
+    return notifyingWrite(async () => {
       await odataPatchQuiet<T>(entity, id, body)
       notifySuccess?.(messages.updated)
-    } catch (e) {
-      // 401(세션 만료)은 onUnauthorized 가 이미 안내함 — 중복 토스트 방지.
-      if (!(e instanceof ApiError && e.status === 401)) {
-        notifyError?.(e instanceof Error ? e.message : messages.requestFailed)
-      }
-      throw e
-    }
+    })
   }
 
   async function odataDeleteQuiet(entity: string, id: string): Promise<void> {
@@ -326,16 +352,10 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   }
 
   async function odataDelete(entity: string, id: string): Promise<void> {
-    try {
+    return notifyingWrite(async () => {
       await odataDeleteQuiet(entity, id)
       notifySuccess?.(messages.deleted)
-    } catch (e) {
-      // 401(세션 만료)은 onUnauthorized 가 이미 안내함 — 중복 토스트 방지.
-      if (!(e instanceof ApiError && e.status === 401)) {
-        notifyError?.(e instanceof Error ? e.message : messages.requestFailed)
-      }
-      throw e
-    }
+    })
   }
 
   async function apiGet<T>(path: string): Promise<T> {
@@ -347,28 +367,44 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     return parseJsonBody<T>(res)
   }
 
-  async function apiPost<T>(path: string, body?: unknown): Promise<T> {
+  async function apiPostQuiet<T>(path: string, body?: unknown): Promise<T> {
     const res = await client.post(apiUrl(path), body ?? {})
     await throwIfError(res)
     return parseJsonBody<T>(res)
   }
 
-  async function apiPut<T>(path: string, body?: unknown): Promise<T> {
+  async function apiPost<T>(path: string, body?: unknown): Promise<T> {
+    return notifyingWrite(() => apiPostQuiet<T>(path, body))
+  }
+
+  async function apiPutQuiet<T>(path: string, body?: unknown): Promise<T> {
     const res = await client.put(apiUrl(path), body ?? {})
     await throwIfError(res)
     return parseJsonBody<T>(res)
   }
 
-  async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
+  async function apiPut<T>(path: string, body?: unknown): Promise<T> {
+    return notifyingWrite(() => apiPutQuiet<T>(path, body))
+  }
+
+  async function apiPatchQuiet<T>(path: string, body?: unknown): Promise<T> {
     const res = await client.patch(apiUrl(path), body ?? {})
     await throwIfError(res)
     return parseJsonBody<T>(res)
   }
 
-  async function apiDelete<T = void>(path: string): Promise<T> {
+  async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
+    return notifyingWrite(() => apiPatchQuiet<T>(path, body))
+  }
+
+  async function apiDeleteQuiet<T = void>(path: string): Promise<T> {
     const res = await client.delete(apiUrl(path))
     await throwIfError(res)
     return parseJsonBody<T>(res)
+  }
+
+  async function apiDelete<T = void>(path: string): Promise<T> {
+    return notifyingWrite(() => apiDeleteQuiet<T>(path))
   }
 
   async function fetchRaw(url: string): Promise<HttpResponse> {
@@ -391,9 +427,13 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     odataDelete,
     apiGet,
     apiPost,
+    apiPostQuiet,
     apiPut,
+    apiPutQuiet,
     apiPatch,
+    apiPatchQuiet,
     apiDelete,
+    apiDeleteQuiet,
     fetchRaw,
     sourceDefaults: {
       baseUrl,

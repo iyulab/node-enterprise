@@ -1,5 +1,29 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **A failed `api*` write told the user nothing.** `notify.error` was wired into the OData writes
+  only, so a custom REST write that came back 4xx threw an `ApiError` and left the screen exactly as
+  it was — indistinguishable from nothing having happened, even when the server had returned a
+  precise reason. The four `api*` writes now notify on failure and rethrow, on the same terms as
+  their OData siblings (401 excluded, since `onUnauthorized` already covers it). Reads are unchanged
+  and still silent on both sides.
+
+### Added
+
+- **`apiPostQuiet`, `apiPutQuiet`, `apiPatchQuiet`, `apiDeleteQuiet`.** The opt-out for the above,
+  matching the existing `odata*Quiet` naming: use them when one user action issues several requests,
+  or when the calling code already reports failures itself and would otherwise show two messages.
+
+### Documentation
+
+- **The README said which hooks exist but not where they apply**, which read as "wire `notify` and
+  failures become visible". It now carries a per-method table and states the axis: writes notify,
+  reads do not, `*Quiet` opts out, 401 never notifies, and `api*` has no success message because the
+  library cannot invent wording for an arbitrary endpoint.
+
 ## 0.13.0
 
 ### Changed

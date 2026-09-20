@@ -121,9 +121,28 @@ await svc.apiPost<Order>('orders/7/attachments', form)
 | `baseUrl` | 모든 요청의 오리진 (필수) |
 | `odataPrefix` / `apiPrefix` | 엔드포인트 prefix (기본 `$data` / `api`) |
 | `onUnauthorized(status)` | 401 시 호출 — 리다이렉트/재진입 가드는 앱이 처리 |
-| `notify.success/error` | 토스트 훅 (생략 시 토스트 없음 — 순수) |
+| `notify.success/error` | 토스트 훅 (생략 시 토스트 없음 — 순수). **메서드마다 걸리는 방식이 다르다 — 바로 아래 표 참조** |
 | `messages` | 사용자 대면 문구 (기본 영어, 지정 키만 대체) |
 | `formatError(info)` | 에러 메시지 포매팅 오버라이드 (앱별 정책) — `info` 는 `status`/`statusText`/`rawMessage`/`details`(검증된 `error.details`)/`body` 를 받는다 |
+
+#### `notify` 가 걸리는 자리 — 축은 «쓰기 ↔ 읽기» 다
+
+| 메서드 | 실패 시 `error` | 성공 시 `success` |
+|---|---|---|
+| `odataPost` · `odataPatch` · `odataDelete` | ✅ (401 제외) | ✅ `saved`·`updated`·`deleted` |
+| `apiPost` · `apiPut` · `apiPatch` · `apiDelete` | ✅ (401 제외) | ❌ |
+| `*Quiet` 전부 (`odataPostQuiet` … `apiDeleteQuiet`) | ❌ | ❌ |
+| `odataGet` · `odataGetById` · `odataCount` · `apiGet` · `fetchRaw` | ❌ | ❌ |
+
+- **조회는 통지하지 않는다.** 빈 화면 자체가 신호이고, 목록을 열 때마다 토스트가 뜨면 읽을 수 없다.
+- **쓰기는 통지한다.** 결과가 화면에 안 보일 수 있기 때문이다 — 서버가 409 와 사유를 돌려줘도,
+  통지가 없으면 아무 일도 일어나지 않은 화면과 구별되지 않는다.
+- **401 은 통지하지 않는다** — `onUnauthorized` 가 이미 안내하므로 겹친다.
+- **`api*` 에는 성공 토스트가 없다.** 임의의 RPC(상태 전이·발행·업로드)를 태우는 경로라
+  «저장되었습니다» 같은 문구를 라이브러리가 지어낼 수 없다. 실패 메시지는 서버가 주므로 어느
+  엔드포인트에서나 뜻이 통하지만, 성공 문구는 그렇지 않다 — 필요하면 호출한 쪽이 띄운다.
+- **이미 자기 래퍼로 통지하고 있다면 `*Quiet` 로 바꾼다.** 이중 토스트를 막는 탈출구이고,
+  `odata*Quiet` 와 같은 관용구다(한 사용자 액션이 여러 요청을 낼 때도 같은 것을 쓴다).
 
 > 도메인 액션(상태 전이 등)·엔티티 목록·권한 코드는 라이브러리에 넣지 말고 앱 adapter 에 둔다.
 

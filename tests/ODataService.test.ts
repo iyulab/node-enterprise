@@ -408,3 +408,67 @@ describe('createODataService — custom REST', () => {
     },
   )
 })
+
+// docket #359 — `notify.error` 가 `odata*` 쓰기에만 걸리고 `api*` 에는 걸리지 않아, 서버가 409 와
+// 사유를 정확히 돌려줘도 화면에 **아무것도 뜨지 않았다**. 실측된 소비앱의 업무 쓰기 경로 12곳이
+// 전부 `api*` 였다. ★축은 «odata ↔ api» 가 아니라 «쓰기 ↔ 읽기» 다 — 조회는 양쪽 다 침묵한다.
+describe('createODataService — 실패 통지의 축은 «쓰기 ↔ 읽기»', () => {
+  const writes = ['apiPost', 'apiPut', 'apiPatch', 'apiDelete'] as const
+  const quiet = ['apiPostQuiet', 'apiPutQuiet', 'apiPatchQuiet', 'apiDeleteQuiet'] as const
+
+  it.each(writes)('%s 는 실패를 통지하고 그대로 다시 던진다', async (method) => {
+    const error = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, notify: { error } })
+    enqueue(json({ Message: '이미 승인된 지시입니다' }, 409))
+    await expect(svc[method]('orders/1/approve', {})).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 409,
+    })
+    expect(error).toHaveBeenCalledWith('이미 승인된 지시입니다')
+  })
+
+  it.each(writes)('%s 는 401 을 통지하지 않는다 — onUnauthorized 와 겹친다', async (method) => {
+    const error = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, notify: { error } })
+    enqueue(json({ Message: 'nope' }, 401))
+    await expect(svc[method]('orders/1/approve', {})).rejects.toMatchObject({ status: 401 })
+    expect(error).not.toHaveBeenCalled()
+  })
+
+  it.each(quiet)('%s 는 통지하지 않는다 — 자기 래퍼를 둔 소비자의 이중 토스트 탈출구', async (method) => {
+    const error = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, notify: { error } })
+    enqueue(json({ Message: '이미 승인된 지시입니다' }, 409))
+    await expect(svc[method]('orders/1/approve', {})).rejects.toMatchObject({ status: 409 })
+    expect(error).not.toHaveBeenCalled()
+  })
+
+  it.each(['apiPost', 'apiPut', 'apiPatch', 'apiDelete'] as const)(
+    '%s 는 성공해도 토스트를 띄우지 않는다 — 임의 RPC 에 맞는 성공 문구를 지어낼 수 없다',
+    async (method) => {
+      const success = vi.fn()
+      const svc = createODataService({ baseUrl: BASE, notify: { success } })
+      enqueue(json({ ok: true }))
+      await svc[method]('orders/1/approve', {})
+      expect(success).not.toHaveBeenCalled()
+    },
+  )
+
+  it('조회는 양쪽 다 침묵한다 — 목록마다 토스트가 뜨면 읽을 수 없다', async () => {
+    const error = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, notify: { error } })
+    enqueue(json({ Message: 'boom' }, 500))
+    await expect(svc.apiGet('orders')).rejects.toMatchObject({ status: 500 })
+    enqueue(json({ error: { message: 'boom' } }, 500))
+    await expect(svc.odataGet('Orders')).rejects.toMatchObject({ status: 500 })
+    enqueue(json({ Message: 'boom' }, 500))
+    await expect(svc.fetchRaw(`${BASE}/x`)).rejects.toMatchObject({ status: 500 })
+    expect(error).not.toHaveBeenCalled()
+  })
+
+  it('notify 를 주지 않으면 순수하다 — 통지 경로가 생겼다고 throw 가 바뀌지 않는다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ Message: 'boom' }, 409))
+    await expect(svc.apiPost('orders/1/approve', {})).rejects.toMatchObject({ status: 409 })
+  })
+})
