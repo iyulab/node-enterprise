@@ -461,8 +461,9 @@ describe('createODataService — 실패 통지의 축은 «쓰기 ↔ 읽기»',
     await expect(svc.apiGet('orders')).rejects.toMatchObject({ status: 500 })
     enqueue(json({ error: { message: 'boom' } }, 500))
     await expect(svc.odataGet('Orders')).rejects.toMatchObject({ status: 500 })
+    // fetchRaw 는 «던지지 않는» 것이 계약이라 여기서는 상태만 확인한다(아래 전용 describe 참조).
     enqueue(json({ Message: 'boom' }, 500))
-    await expect(svc.fetchRaw(`${BASE}/x`)).rejects.toMatchObject({ status: 500 })
+    expect((await svc.fetchRaw(`${BASE}/x`)).status).toBe(500)
     expect(error).not.toHaveBeenCalled()
   })
 
@@ -470,5 +471,83 @@ describe('createODataService — 실패 통지의 축은 «쓰기 ↔ 읽기»',
     const svc = createODataService({ baseUrl: BASE })
     enqueue(json({ Message: 'boom' }, 409))
     await expect(svc.apiPost('orders/1/approve', {})).rejects.toMatchObject({ status: 409 })
+  })
+})
+
+describe('ODataRequestOptions — 전역 401 정책의 호출 단위 예외', () => {
+  it('기본값은 종전 그대로다 — 401 이 훅을 부르고 sessionExpired 로 단락한다', async () => {
+    const onUnauthorized = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, onUnauthorized })
+    enqueue(json({ error: { message: '아이디 또는 비밀번호가 올바르지 않습니다' } }, 401))
+    await expect(svc.apiPostQuiet('auth/login', {})).rejects.toMatchObject({ status: 401 })
+    expect(onUnauthorized).toHaveBeenCalledWith(401)
+  })
+
+  it('onUnauthorized:false 면 훅을 부르지 않고 «서버가 준 메시지» 로 던진다 — 로그인 폼이 사유를 지어내지 않아도 된다', async () => {
+    const onUnauthorized = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, onUnauthorized })
+    enqueue(json({ error: { message: '아이디 또는 비밀번호가 올바르지 않습니다' } }, 401))
+    await expect(
+      svc.apiPostQuiet('auth/login', { id: 'u', pw: 'x' }, { onUnauthorized: false }),
+    ).rejects.toMatchObject({ status: 401, message: '아이디 또는 비밀번호가 올바르지 않습니다' })
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it('401 이 아닌 상태에는 아무 영향이 없다 — 이 옵션은 401 축 하나만 끈다', async () => {
+    const onUnauthorized = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, onUnauthorized })
+    enqueue(json({ Message: 'boom' }, 500))
+    await expect(svc.apiGet('orders', { onUnauthorized: false })).rejects.toMatchObject({ status: 500 })
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it('통지 래퍼를 지나는 non-quiet 경로에서도 옵션이 전달된다', async () => {
+    const onUnauthorized = vi.fn()
+    const error = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, onUnauthorized, notify: { error } })
+    enqueue(json({ error: { message: '자격 증명 오류' } }, 401))
+    await expect(
+      svc.apiPost('auth/login', {}, { onUnauthorized: false }),
+    ).rejects.toMatchObject({ status: 401, message: '자격 증명 오류' })
+    expect(onUnauthorized).not.toHaveBeenCalled()
+    // 401 은 여전히 토스트 대상이 아니다 — 이 옵션이 통지 축을 건드리지 않는다는 뜻이다.
+    expect(error).not.toHaveBeenCalled()
+  })
+
+  it('odata 쓰기 경로에도 열려 있다 — 부분집합으로 두면 다음 소비자가 다른 메서드에서 같은 벽을 만난다', async () => {
+    const onUnauthorized = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, onUnauthorized })
+    enqueue(json({ error: { message: '권한 없음' } }, 401))
+    await expect(
+      svc.odataPatchQuiet('Orders', '1', { x: 1 } as never, { onUnauthorized: false }),
+    ).rejects.toMatchObject({ status: 401, message: '권한 없음' })
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+})
+
+describe('fetchRaw — 「raw」 는 정책을 태우지 않는다는 뜻이다', () => {
+  it('비-2xx 에도 던지지 않고 응답을 그대로 돌려준다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ Message: 'boom' }, 500))
+    const res = await svc.fetchRaw(`${BASE}/x`)
+    expect(res.status).toBe(500)
+    expect(res.ok).toBe(false)
+  })
+
+  it('401 에도 onUnauthorized 를 부르지 않는다 — 연결 프로브가 「서버가 살아서 거절했다」를 「끊김」으로 세지 않게', async () => {
+    const onUnauthorized = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, onUnauthorized })
+    enqueue(json({ error: { message: 'unauthorized' } }, 401))
+    const res = await svc.fetchRaw(`${BASE}/ping`)
+    expect(res.status).toBe(401)
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it('2xx 는 종전과 같다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ ok: true }))
+    const res = await svc.fetchRaw(`${BASE}/x`)
+    expect(res.ok).toBe(true)
+    expect(await res.json()).toEqual({ ok: true })
   })
 })

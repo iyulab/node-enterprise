@@ -107,6 +107,14 @@ await svc.apiPut<Order>('orders/7', { name: 'A (revised)' })    // 리소스 전
 await svc.apiPatch<Order>('orders/7', { note: 'urgent' })
 await svc.apiDelete('orders/7')                                 // 204 안전
 
+// 로그인 — 401 이 「세션 만료」가 아니라 「자격 증명 틀림」인 유일한 호출이다.
+// 전역 onUnauthorized 를 이 호출에서만 끄면, 서버가 준 사유가 그대로 ApiError.message 로 온다.
+await svc.apiPost('auth/login', creds, { onUnauthorized: false })
+
+// 연결 프로브 — 「응답이 왔는가」만 묻는다. fetchRaw 는 던지지도, 401 훅을 부르지도 않는다.
+const probe = await svc.fetchRaw(svc.apiUrl('ping'))
+const reachable = true          // 여기 닿았다는 것 자체가 답이다(probe.status 는 볼 필요 없다)
+
 // body가 FormData 인스턴스면 그대로(직렬화 없이) 멀티파트로 전송된다 —
 // Content-Type은 브라우저가 boundary와 함께 자동 설정한다. apiPost/apiPut/apiPatch 전부 동일.
 const form = new FormData()
@@ -143,6 +151,38 @@ await svc.apiPost<Order>('orders/7/attachments', form)
   엔드포인트에서나 뜻이 통하지만, 성공 문구는 그렇지 않다 — 필요하면 호출한 쪽이 띄운다.
 - **이미 자기 래퍼로 통지하고 있다면 `*Quiet` 로 바꾼다.** 이중 토스트를 막는 탈출구이고,
   `odata*Quiet` 와 같은 관용구다(한 사용자 액션이 여러 요청을 낼 때도 같은 것을 쓴다).
+
+#### 401 축 — 전역 정책과 그 호출 단위 예외
+
+`onUnauthorized` 는 **서비스 전역 정책**이다: 401 이 오면 훅을 부르고 `messages.sessionExpired`
+로 단락한다. 이 기본값은 거의 항상 옳지만 **두 자리에서 틀린다.**
+
+| 자리 | 왜 틀리는가 | 해법 |
+|---|---|---|
+| **로그인 자체** | 401 이 「세션이 끊겼다」가 아니라 「자격 증명이 틀렸다」를 뜻한다. 전역 훅이 발화하면 로그인 화면에서 로그인 화면으로 리다이렉트되고, 던져지는 메시지가 `sessionExpired` 라 화면이 실패 사유를 **지어내야** 한다 | `{ onUnauthorized: false }` |
+| **연결 프로브** | *「응답이 왔는가」* 만 묻는 호출이라, 401 은 **서버가 살아서 거절한 것** = 「닿았다」다. 훅+예외를 타면 로그인하지 않은 사용자에게 늘 「서버에 연결할 수 없습니다」가 뜬다 | `fetchRaw` |
+
+```ts
+// 401 을 «그 호출의 결과» 로 받는다 — 훅 없음, 메시지 덮어쓰기 없음.
+await svc.apiPost('auth/login', creds, { onUnauthorized: false })
+```
+
+- **모든 요청 메서드가 이 옵션을 받는다**(마지막 선택 인자). 부분집합으로 두면 다음 소비자가
+  다른 메서드에서 같은 벽을 만난다.
+- **끄는 축만 있다.** 새 동작을 켜는 스위치가 아니라 전역 정책의 탈출구이므로, 옵션을 생략한
+  호출은 이 옵션이 생기기 전과 **한 글자도 다르게 동작하지 않는다.**
+- **`authenticate()` 같은 이름 있는 프리미티브는 두지 않는다** — 그것은 엔드포인트 경로·바디
+  모양·토큰 처리 규약을 라이브러리가 안다고 가정하는 **도메인 이름**이다. 그 규약은 앱마다
+  다르므로 adapter 에 남기고, 라이브러리는 범용 축만 연다.
+
+#### `fetchRaw` — 「raw」 는 정책을 태우지 않는다는 뜻이다
+
+응답을 **그대로** 돌려준다. **비-2xx 에도 던지지 않고 `onUnauthorized` 도 부르지 않는다** —
+상태 판단은 호출부의 몫이다. 상태에 따라 예외·토스트·세션 처리를 원하면 `apiGet` 을 쓴다.
+
+> ⚠**0.15.0 이전에는 이 문장이 선언에 적혀 있으면서 실제로는 비-2xx 에 던졌다.** 선언이 옳고
+> 구현이 틀렸던 자리라 구현을 고쳤다. `fetchRaw` 의 throw 에 기대고 있었다면 호출부에서
+> `if (!res.ok) throw …` 로 바꾸거나 `apiGet` 으로 옮긴다.
 
 > 도메인 액션(상태 전이 등)·엔티티 목록·권한 코드는 라이브러리에 넣지 말고 앱 adapter 에 둔다.
 
