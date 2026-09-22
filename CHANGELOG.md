@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.15.0] - 2026-09-22
+
+### Fixed
+
+- **`fetchRaw` now matches its own declaration.** It was documented as returning the raw
+  response, but the implementation ran every response through `throwIfError` and threw on any
+  non-2xx — and it invoked the session hook while doing so. A connection probe that only asks
+  "did a response arrive at all" therefore counted a `401` as *unreachable*, when the server was
+  in fact alive and refusing, so every signed-out user saw a permanent "cannot reach the server".
+  The declaration was the right one, so the implementation changed to match it: `fetchRaw` returns
+  the response as-is and calls no session hook.
+  ⚠ **If you relied on the throw**, check `res.ok` yourself, or call `apiGet` when you want the
+  error policy applied. Nothing else in the service changed its throwing behavior.
+
+### Added
+
+- **Per-call control over the `401` hook.** `onUnauthorized` was all-or-nothing for the whole
+  service, but a sign-in call is the one place where `401` means "wrong credentials" rather than
+  "your session expired" — so a failed sign-in fired the global hook and threw a message about an
+  expired session, leaving the screen to invent a reason for a failure it had been told the wrong
+  cause of. Every request method now takes an optional trailing `ODataRequestOptions`; passing
+  `{ onUnauthorized: false }` keeps that call out of the global hook and throws with the message
+  the server actually sent. Omitting it changes nothing.
+- The option is accepted by **all** request methods, not only the ones with a use for it today.
+  The failure being fixed is precisely that a single method had no way to express this, and drawing
+  the line again one method further along would reproduce it.
+
+### Notes
+
+- **No `authenticate()` primitive was added**, though one was proposed. That name would have to
+  assume an endpoint path, a request body shape and a token convention — none of which this
+  library owns — so it would encode one caller's server into a general client.
+
 ## [0.14.0] - 2026-09-20
 
 ### Fixed
