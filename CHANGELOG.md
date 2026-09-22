@@ -13,6 +13,10 @@
   differ only on the upper type steps and the radii, it still looked applied. The clause now
   states that, names the version where the documented usage starts working, and says what to do
   on an older one.
+- **`docs/lob-layers.md` carried the same third clause, and the same false statement with it.**
+  A rule that lives in two published documents goes stale in two places; that one now names the
+  premise this package cannot hold on its own -- load order is decided by whoever injects the
+  defaults layer -- and says which version makes the documented arrangement true.
 - **The header also called the `@iyulab/components` peer optional. It is not** — this package's
   runtime code imports `Locale`, `format` and `icons` from it, so it is required whether or not
   you load the preset. The prose was the wrong half of that mismatch and has been corrected.
