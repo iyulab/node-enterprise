@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.16.0] - 2026-09-22
+
+### Documentation
+
+- 🔴 **`styles/preset.css` now says why its documented usage used to do nothing.** The header's
+  third clause said layer order is decided by load order and is therefore already under the
+  consumer's control. It was not: the defaults layer is injected at runtime by
+  `@iyulab/components`' `Theme.init()`, so until that package's **1.44.0** it landed *after* a
+  statically imported sheet and won. The one-line `import` this file documents had **no effect at
+  all**, silently — and because the two sheets agree on `body`/`label`/`caption`/`overline` and
+  differ only on the upper type steps and the radii, it still looked applied. The clause now
+  states that, names the version where the documented usage starts working, and says what to do
+  on an older one.
+- **The header also called the `@iyulab/components` peer optional. It is not** — this package's
+  runtime code imports `Locale`, `format` and `icons` from it, so it is required whether or not
+  you load the preset. The prose was the wrong half of that mismatch and has been corrected.
+
+### Changed
+
+- 🔴 **The `@iyulab/components` peer range is now `>=1.44.0`** (was `>=1.27.0`). Every version
+  below that places the defaults layer last, which is exactly the arrangement in which this
+  package's documented preset usage is silently void. A range that admits those versions lets a
+  consumer install a combination where the preset does nothing and nothing says so — declaring
+  the floor is what turns that from a silent failure into an install-time answer.
+
+⚠ **This is the only reason for the minor.** No API changed.
+
 ## [0.15.0] - 2026-09-22
 
 ### Fixed

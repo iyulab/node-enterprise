@@ -79,6 +79,52 @@ describe('하우스 프리셋 계약', () => {
       .toBeGreaterThan(0);
   });
 
+  /**
+   * 🔴**⑶-c — 세 번째 전제는 «우리가» 지킬 수 없다. 위임했고, 그 위임을 여기서 잰다.**
+   *
+   * ⑶은 전제가 **셋**이다: ⓐ특이도 대등 · ⓑ이길 것이 있음 · ⓒ**로드 순서가 실제로 프리셋을
+   * 기본 시트보다 뒤에 둔다.** 위 두 검사는 ⓐⓑ만 재고, 둘 다 **0.7.0 의 `:where()` 사고에서
+   * 태어났다** — 즉 *예전에 실패한 전제*만 지키고 있었다.
+   *
+   * ⚠**ⓒ가 깨진 채로 오래 살았다.** 기본 시트는 `Theme.init()` 이 **런타임에** 넣고, 이 파일은
+   * 번들러가 **파싱 시점에** 올린다. `@iyulab/components` 1.43.x 이하는 그 시트를 `<head>`
+   * **끝**에 붙였으므로 ***언제나 기본값이 이겼다*** — 문서한 `import` 한 줄이 무효였고,
+   * 오류도 경고도 없었다.
+   *
+   * 🔴**그래서 이 검사는 «동작» 이 아니라 «위임» 을 잰다.** ⓒ의 실제 측정은 그 동작을 소유한
+   * 패키지에 있다(`@iyulab/components` 의 `tests/browser/theme-base-layer.browser.test.ts` —
+   * 실 브라우저 계산값으로 재고, 삽입 지점을 되돌리면 발화한다). 이 패키지가 할 수 있는 유일한
+   * 일은 ***그 동작을 가진 버전을 요구하는 것*** 이고, 그것은 `peerDependencies` 로 표현된다.
+   *
+   * ⚠**브라우저 프로젝트를 신설하지 않은 근거**: 여기서 그것을 다시 재면 위 상류 검사와 **같은
+   * 기전**을 재게 된다(이 파일 고유의 실패 모드가 아니다). 이 패키지에 두 번째 CSS 계약이
+   * 생기면 그때 다시 저울질한다.
+   */
+  it('🔴⑶-c 세 번째 전제를 가진 버전을 peer 로 «요구» 한다', () => {
+    const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
+    const range: string | undefined = pkg.peerDependencies?.['@iyulab/components'];
+    expect(range, '@iyulab/components 가 peer 로 선언돼 있어야 한다').toBeTruthy();
+
+    // 기본값 층이 «바닥» 에 서기 시작한 판. 이 아래를 담는 범위는 ⑶이 조용히 무효인
+    // 조합을 소비자에게 허용한다 — 「범위가 담는다」와 「범위가 요구한다」는 다르다.
+    const BASE_LAYER_MIN = [1, 44, 0];
+    const floor = /(\d+)\.(\d+)\.(\d+)/.exec(range!);
+    expect(floor, `해석할 수 없는 범위: ${range}`).not.toBeNull();
+    const declared = floor!.slice(1).map(Number);
+
+    const gte =
+      declared[0] > BASE_LAYER_MIN[0] ||
+      (declared[0] === BASE_LAYER_MIN[0] &&
+        (declared[1] > BASE_LAYER_MIN[1] ||
+          (declared[1] === BASE_LAYER_MIN[1] && declared[2] >= BASE_LAYER_MIN[2])));
+
+    expect(
+      gte,
+      `peer 범위가 ${range} 라 기본값 층이 «끝» 에 붙던 판(≤1.43.x)을 담는다 — ` +
+        '그 조합에서는 이 파일의 문서한 사용법(정적 import)이 조용히 무효다.',
+    ).toBe(true);
+  });
+
   it('축 이름을 발명하지 않는다 — components 가 여는 축만 채운다', () => {
     // 프리셋이 새 토큰 이름을 만들면 그 이름의 소유자가 사라진다(어느 패키지의 축인가?).
     const AXES = [
