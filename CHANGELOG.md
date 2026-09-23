@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.18.0] - 2026-09-24
+
+### Fixed
+
+- 🔴 **`odataGet` no longer drops `@odata.nextLink`.** It returned only the first response's `value`,
+  so when a server pages a collection (server-driven paging, e.g. a default page size), a list read
+  without `$top` ended at the first page with nothing telling the caller rows were missing.
+  `odataGet` now follows `nextLink` until the collection is complete and returns every row; a
+  response without `nextLink` behaves exactly as before. A `nextLink` outside the service origin,
+  or one that returns to a page already read, throws instead of silently stopping — the requests
+  carry the session, and a quietly shortened list is the failure this fixes.
+
+### Added
+
+- **`odataGetPage(entity, params?, opts?)` and `odataGetNextPage(nextLink, opts?)`** for screens that
+  read a page at a time. A page is `{ value, nextLink?, count? }` (`count` when `$count=true`); pass
+  `nextLink` as given — it carries the server's continuation state.
+
 ## [0.17.0] - 2026-09-23
 
 ### Added
