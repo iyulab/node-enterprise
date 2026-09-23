@@ -97,6 +97,11 @@ export const svc = createODataService({
 })
 
 await svc.odataGet<Order>('Orders', { $top: '20' })   // value 배열 언랩
+
+// 서버가 페이지를 자르면(@odata.nextLink) odataGet 은 끝까지 따라가 전량을 모은다.
+// 페이지 단위로 읽어야 하는 화면은 페이지 API 를 쓴다 — nextLink 는 조립하지 말고 그대로 넘긴다.
+const page = await svc.odataGetPage<Order>('Orders', { $count: 'true' })  // { value, nextLink?, count? }
+if (page.nextLink) await svc.odataGetNextPage<Order>(page.nextLink)
 await svc.odataPost<Order>('Orders', { name: 'A', note: '' })  // '' → null 정규화 + 성공 토스트
 svc.odataUrl('Orders')                                 // flex-table useODataSource 엔드포인트
 svc.sourceDefaults                                     // { baseUrl, onUnauthorized } 주입용
@@ -141,7 +146,7 @@ await svc.apiPost<Order>('orders/7/attachments', form)
 | `odataPost` · `odataPatch` · `odataDelete` | ✅ (401 제외) | ✅ `saved`·`updated`·`deleted` |
 | `apiPost` · `apiPut` · `apiPatch` · `apiDelete` | ✅ (401 제외) | ❌ |
 | `*Quiet` 전부 (`odataPostQuiet` … `apiDeleteQuiet`) | ❌ | ❌ |
-| `odataGet` · `odataGetById` · `odataCount` · `apiGet` · `fetchRaw` | ❌ | ❌ |
+| `odataGet` · `odataGetPage` · `odataGetNextPage` · `odataGetById` · `odataCount` · `apiGet` · `fetchRaw` | ❌ | ❌ |
 
 - **조회는 통지하지 않는다.** 빈 화면 자체가 신호이고, 목록을 열 때마다 토스트가 뜨면 읽을 수 없다.
 - **쓰기는 통지한다.** 결과가 화면에 안 보일 수 있기 때문이다 — 서버가 409 와 사유를 돌려줘도,

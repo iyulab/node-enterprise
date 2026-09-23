@@ -145,6 +145,20 @@ export interface ODataRequestOptions {
   onUnauthorized?: false
 }
 
+/**
+ * 서버가 자른 컬렉션의 한 페이지(OData v4 서버 주도 페이징).
+ *
+ * `nextLink` 는 서버가 준 **다음 페이지 URL** 이다 — 조립하지 말고 `odataGetNextPage` 에 그대로 넘긴다
+ * (`$skiptoken` 등 이어 읽기 상태가 그 안에 있다). 없으면 마지막 페이지다.
+ */
+export interface ODataPage<T> {
+  value: T[]
+  /** 응답의 `@odata.nextLink` — 서버가 페이지를 잘랐을 때만 있다. */
+  nextLink?: string
+  /** 응답의 `@odata.count` — `$count=true` 로 요청했을 때만 있다. */
+  count?: number
+}
+
 export interface ODataServiceConfig {
   /** 모든 요청의 베이스 URL (예: `window.location.origin`). 슬래시 없이 오리진만. */
   baseUrl: string
@@ -184,8 +198,18 @@ export interface ODataService {
   /** 설정된 prefix + baseUrl 로 REST 엔드포인트 URL 을 만든다. */
   apiUrl(path: string): string
 
-  /** OData GET(목록). `value` 배열을 벗겨 반환한다. */
+  /**
+   * OData GET(목록) — **전량**을 반환한다. 서버가 페이지를 자르면(`@odata.nextLink`) 끝까지 따라가
+   * 모은다. 화면이 페이지 단위로 읽어야 하면 `odataGetPage` 를 쓴다.
+   *
+   * ⚠`nextLink` 가 서비스의 오리진 밖을 가리키거나 이미 읽은 URL 로 되돌아오면 **던진다** —
+   * 조용히 멈추면 잘린 목록이 전량처럼 보이고, 그것이 이 동작이 막으려는 실패다.
+   */
   odataGet<T>(entity: string, params?: Record<string, string>, opts?: ODataRequestOptions): Promise<T[]>
+  /** OData GET(목록) 한 페이지 — `value` 와 함께 `nextLink`·`count` 를 준다. */
+  odataGetPage<T>(entity: string, params?: Record<string, string>, opts?: ODataRequestOptions): Promise<ODataPage<T>>
+  /** `ODataPage.nextLink` 가 가리키는 다음 페이지. 오리진 규칙은 `odataGet` 과 같다. */
+  odataGetNextPage<T>(nextLink: string, opts?: ODataRequestOptions): Promise<ODataPage<T>>
   /** OData GET(단건, key). */
   odataGetById<T>(entity: string, id: string, opts?: ODataRequestOptions): Promise<T>
   /** `$count=true&$top=0` — 데이터 없이 총 건수만. */
@@ -336,13 +360,60 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     throw new ApiError(message, res.status, details)
   }
 
-  async function odataGet<T>(entity: string, params?: Record<string, string>, opts?: ODataRequestOptions): Promise<T[]> {
+  function collectionUrl(entity: string, params?: Record<string, string>): string {
     const u = new URL(odataUrl(entity))
     if (params) for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v)
-    const res = await client.get(u.toString())
+    return u.toString()
+  }
+
+  /**
+   * 서버가 준 `nextLink` 를 요청할 수 있는 절대 URL 로 푼다(상대 URL 은 규격상 허용된다).
+   * 🔴**서비스 오리진 밖이면 던진다** — 이 요청에는 쿠키·세션이 실리므로, 응답 본문이 가리키는
+   * 임의의 호스트로 따라가지 않는다.
+   */
+  function resolveNextLink(nextLink: string, from: string): string {
+    const next = new URL(nextLink, from)
+    const origin = new URL(odataUrl('')).origin
+    if (next.origin !== origin) {
+      throw new Error(`OData nextLink points outside the service origin (${next.origin}); refusing to follow it`)
+    }
+    return next.toString()
+  }
+
+  async function getPage<T>(url: string, opts?: ODataRequestOptions): Promise<ODataPage<T>> {
+    const res = await client.get(url)
     await throwIfError(res, opts)
-    const json = await res.json<{ value?: T[] }>()
-    return json.value ?? (json as unknown as T[])
+    const json = await res.json<{ value?: T[]; '@odata.nextLink'?: string; '@odata.count'?: number }>()
+    const page: ODataPage<T> = { value: json.value ?? (json as unknown as T[]) }
+    const nextLink = json['@odata.nextLink']
+    if (typeof nextLink === 'string' && nextLink) page.nextLink = resolveNextLink(nextLink, url)
+    if (typeof json['@odata.count'] === 'number') page.count = json['@odata.count']
+    return page
+  }
+
+  async function odataGet<T>(entity: string, params?: Record<string, string>, opts?: ODataRequestOptions): Promise<T[]> {
+    let url = collectionUrl(entity, params)
+    const seen = new Set<string>([url])
+    let page = await getPage<T>(url, opts)
+    const rows = [...page.value]
+    while (page.nextLink) {
+      if (seen.has(page.nextLink)) {
+        throw new Error(`OData nextLink repeats an already-read page (${page.nextLink}); the collection cannot be completed`)
+      }
+      url = page.nextLink
+      seen.add(url)
+      page = await getPage<T>(url, opts)
+      rows.push(...page.value)
+    }
+    return rows
+  }
+
+  function odataGetPage<T>(entity: string, params?: Record<string, string>, opts?: ODataRequestOptions): Promise<ODataPage<T>> {
+    return getPage<T>(collectionUrl(entity, params), opts)
+  }
+
+  async function odataGetNextPage<T>(nextLink: string, opts?: ODataRequestOptions): Promise<ODataPage<T>> {
+    return getPage<T>(resolveNextLink(nextLink, odataUrl('')), opts)
   }
 
   async function odataGetById<T>(entity: string, id: string, opts?: ODataRequestOptions): Promise<T> {
@@ -481,6 +552,8 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     odataUrl,
     apiUrl,
     odataGet,
+    odataGetPage,
+    odataGetNextPage,
     odataGetById,
     odataCount,
     odataPostQuiet,

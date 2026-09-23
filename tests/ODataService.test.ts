@@ -626,3 +626,73 @@ describe('ApiError.notified — 알렸다는 사실이 에러와 함께 간다',
     expect(wasNotified(undefined)).toBe(false)
   })
 })
+
+describe('서버 주도 페이징 — `@odata.nextLink` 를 버리지 않는다', () => {
+  // http-client 는 쿼리를 다시 직렬화한다(`$` → `%24`) — 뜻은 같으므로 디코드해서 비교한다.
+  const sent = (i: number) => decodeURIComponent(recorded[i].url)
+
+  it('odataGet 은 nextLink 를 끝까지 따라가 전량을 모은다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ value: [{ id: 1 }, { id: 2 }], '@odata.nextLink': `${BASE}/$data/Orders?$skiptoken=2` }))
+    enqueue(json({ value: [{ id: 3 }] }))
+    const rows = await svc.odataGet<{ id: number }>('Orders')
+    expect(rows).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }])
+    expect([sent(0), sent(1)]).toEqual([`${BASE}/$data/Orders`, `${BASE}/$data/Orders?$skiptoken=2`])
+  })
+
+  it('nextLink 가 없으면 종전과 같다 — 요청 하나', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ value: [{ id: 1 }] }))
+    expect(await svc.odataGet('Orders', { $top: '20' })).toEqual([{ id: 1 }])
+    expect(recorded).toHaveLength(1)
+  })
+
+  it('상대 nextLink 는 요청 URL 기준으로 푼다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ value: [{ id: 1 }], '@odata.nextLink': 'Orders?$skiptoken=1' }))
+    enqueue(json({ value: [{ id: 2 }] }))
+    expect(await svc.odataGet('Orders')).toEqual([{ id: 1 }, { id: 2 }])
+    expect(sent(1)).toBe(`${BASE}/$data/Orders?$skiptoken=1`)
+  })
+
+  it('🔴서비스 오리진 밖의 nextLink 는 따라가지 않고 던진다 — 잘린 목록을 전량처럼 돌려주지 않는다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ value: [{ id: 1 }], '@odata.nextLink': 'https://elsewhere.test/$data/Orders?$skiptoken=1' }))
+    await expect(svc.odataGet('Orders')).rejects.toThrow(/outside the service origin/)
+    expect(recorded).toHaveLength(1)
+  })
+
+  it('🔴이미 읽은 페이지로 되돌아오는 nextLink 는 무한히 돌지 않고 던진다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ value: [{ id: 1 }], '@odata.nextLink': `${BASE}/$data/Orders?$skiptoken=1` }))
+    enqueue(json({ value: [{ id: 2 }], '@odata.nextLink': `${BASE}/$data/Orders?$skiptoken=1` }))
+    await expect(svc.odataGet('Orders')).rejects.toThrow(/repeats an already-read page/)
+    expect(recorded).toHaveLength(2)
+  })
+
+  it('다음 페이지의 실패는 전역 401 정책을 그대로 탄다', async () => {
+    const onUnauthorized = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, onUnauthorized })
+    enqueue(json({ value: [{ id: 1 }], '@odata.nextLink': `${BASE}/$data/Orders?$skiptoken=1` }))
+    enqueue(json({}, 401))
+    await expect(svc.odataGet('Orders')).rejects.toMatchObject({ status: 401 })
+    expect(onUnauthorized).toHaveBeenCalledWith(401)
+  })
+
+  it('odataGetPage 는 한 페이지와 nextLink·count 를 준다 — odataGetNextPage 로 이어 읽는다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ value: [{ id: 1 }], '@odata.count': 2, '@odata.nextLink': `${BASE}/$data/Orders?$skiptoken=1` }))
+    const first = await svc.odataGetPage<{ id: number }>('Orders', { $count: 'true' })
+    expect(first).toEqual({ value: [{ id: 1 }], count: 2, nextLink: `${BASE}/$data/Orders?$skiptoken=1` })
+    enqueue(json({ value: [{ id: 2 }] }))
+    const second = await svc.odataGetNextPage<{ id: number }>(first.nextLink!)
+    expect(second).toEqual({ value: [{ id: 2 }] })
+    expect(sent(1)).toBe(`${BASE}/$data/Orders?$skiptoken=1`)
+  })
+
+  it('odataGetNextPage 도 오리진 밖 URL 을 거부한다(요청 전에)', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    await expect(svc.odataGetNextPage('https://elsewhere.test/x')).rejects.toThrow(/outside the service origin/)
+    expect(recorded).toHaveLength(0)
+  })
+})
