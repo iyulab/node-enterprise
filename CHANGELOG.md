@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.17.0] - 2026-09-23
+
+### Added
+
+- **`ApiError.notified` and `wasNotified(err)` — whether the service already told the user about a
+  failure.** A failed write (`odataPost/Patch/Delete`, `apiPost/Put/Patch/Delete`) is reported
+  through `notify.error` and then rethrown, so the caller's flow stops. When that error reaches a
+  global `unhandledrejection` handler or an error boundary, the boundary could not tell it from a
+  failed read, which the service does not report: toasting again showed the message twice, not
+  toasting left read failures silent. The error now carries the answer. `notified` is `true` only
+  when the service actually called `notify.error` — reads, `*Quiet` writes, 401s and services
+  without `notify.error` give `false` — and it is read-only: only the service can set it.
+  `wasNotified(err)` answers the same for failures that are not `ApiError`, such as a network
+  error on a write.
+
 ## [0.16.0] - 2026-09-22
 
 ### Documentation
