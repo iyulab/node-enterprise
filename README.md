@@ -19,6 +19,7 @@ npm install @iyulab/enterprise
 | `ApiConfig` | class | baseUrl/OData·API prefix·dev 판별 중앙 설정 |
 | `createODataService` | factory | OData v4 + custom REST CRUD 서비스(401·토스트·에러파싱) |
 | `ApiError` | class | HTTP status + OData `error.details`(필드별 검증 상세)를 실은 API 호출 실패 에러 |
+| `wasNotified` | function | 이 실패를 서비스가 `notify.error` 로 이미 알렸는가 — 경계의 이중 토스트 방지 |
 | `createAuthClient` | factory | 쿠키 세션 인증(fetchMe/login/logout) — 제네릭 user/자격증명 |
 | `createPermissionStore` · `hasPermission` 외 | store | 권한 스냅샷 store + 판정 free 함수 |
 | `CurrencyHelper` | class | 통화 포맷(`formatKRW` 등) |
@@ -208,6 +209,26 @@ try {
 | `message` | 사용자 대면 메시지 (`formatError` → 서버 raw → status 폴백 순으로 결정) |
 | `status` | HTTP status |
 | `details` | `error.details` 항목 배열 — 규격상 `code`/`message` 는 필수, `target`(속성 이름)은 선택. 상세가 없거나 규격 형태가 아니면 `undefined` |
+| `notified` | 서비스가 이 실패를 `notify.error` 로 **이미 사용자에게 알렸는가**(읽기 전용). 쓰기 실패를 알렸으면 `true`, 읽기·`*Quiet`·401 이나 `notify.error` 미설정이면 `false` |
+
+#### 경계에서 «알리지 않은 것만» 알리기 — `notified` · `wasNotified`
+
+쓰기 실패는 서비스가 알린 **뒤** 같은 에러를 다시 던진다(호출부 흐름을 멈추게 하려고). 그 에러가 전역
+`unhandledrejection` 핸들러나 error boundary 까지 올라오면, 거기서 다시 토스트를 띄우면 이중 통지가 되고
+안 띄우면 읽기 실패가 조용해진다. 어느 쪽인지는 에러가 들고 온다:
+
+```typescript
+import { ApiError, wasNotified } from '@iyulab/enterprise'
+
+window.addEventListener('unhandledrejection', (ev) => {
+  const err = ev.reason
+  if (err instanceof ApiError || wasNotified(err)) ev.preventDefault()
+  if (err instanceof ApiError && !err.notified) app.error(err.message)   // 읽기 실패 등
+})
+```
+
+`wasNotified(err)` 는 `ApiError` 가 아닌 실패(네트워크 오류 등)에도 같은 답을 준다 — 쓰기 경로에서 알렸다면
+`true`. 표식은 서비스만 세울 수 있다(에러 객체의 필드가 아니다).
 
 
 ### 인증 + 권한 (`createAuthClient` · 권한 store)

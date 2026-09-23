@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { createODataService, ApiError } from '../src/data/ODataService'
+import { createODataService, ApiError, wasNotified } from '../src/data/ODataService'
 
 // ---- fetch 목: 요청을 기록하고 큐에 넣은 응답을 순서대로 돌려준다 ----
 interface Recorded {
@@ -549,5 +549,80 @@ describe('fetchRaw — 「raw」 는 정책을 태우지 않는다는 뜻이다'
     const res = await svc.fetchRaw(`${BASE}/x`)
     expect(res.ok).toBe(true)
     expect(await res.json()).toEqual({ ok: true })
+  })
+})
+
+// docket #415 — «이 실패를 사용자에게 알렸는가» 는 `notifyingWrite` 안에서만 확정된다. 에러와 함께
+// 이동해야 경계(전역 거부 핸들러·error boundary)가 서비스 없이 «알리지 않은 것만» 알릴 수 있다.
+describe('ApiError.notified — 알렸다는 사실이 에러와 함께 간다', () => {
+  const writes = [
+    ['odataPost', (s: any) => s.odataPost('Orders', {})],
+    ['odataPatch', (s: any) => s.odataPatch('Orders', 1, {})],
+    ['odataDelete', (s: any) => s.odataDelete('Orders', 1)],
+    ['apiPost', (s: any) => s.apiPost('orders/1/approve', {})],
+    ['apiPut', (s: any) => s.apiPut('orders/1', {})],
+    ['apiPatch', (s: any) => s.apiPatch('orders/1', {})],
+    ['apiDelete', (s: any) => s.apiDelete('orders/1')],
+  ] as const
+
+  const rejection = async (p: Promise<unknown>) => {
+    try { await p } catch (e) { return e }
+    throw new Error('expected a rejection')
+  }
+
+  it.each(writes)('%s 실패를 알렸으면 notified 가 true 다', async (_name, call) => {
+    const error = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, notify: { error } })
+    enqueue(json({ Message: '이미 승인된 지시입니다' }, 409))
+    const e = await rejection(call(svc))
+    expect(error).toHaveBeenCalledOnce()
+    expect(e).toBeInstanceOf(ApiError)
+    expect((e as ApiError).notified).toBe(true)
+    expect(wasNotified(e)).toBe(true)
+  })
+
+  it('401 은 알리지 않으므로 false 다 — onUnauthorized 가 안내한다', async () => {
+    const svc = createODataService({ baseUrl: BASE, notify: { error: vi.fn() } })
+    enqueue(json({ Message: 'nope' }, 401))
+    const e = await rejection(svc.apiPost('orders/1/approve', {}))
+    expect((e as ApiError).notified).toBe(false)
+  })
+
+  it('읽기 실패는 false 다 — 경계가 알려야 한다', async () => {
+    const svc = createODataService({ baseUrl: BASE, notify: { error: vi.fn() } })
+    enqueue(json({ Message: 'boom' }, 500))
+    expect(((await rejection(svc.apiGet('orders'))) as ApiError).notified).toBe(false)
+    enqueue(json({ error: { message: 'boom' } }, 500))
+    expect(((await rejection(svc.odataGet('Orders'))) as ApiError).notified).toBe(false)
+  })
+
+  it('Quiet 쓰기는 false 다', async () => {
+    const svc = createODataService({ baseUrl: BASE, notify: { error: vi.fn() } })
+    enqueue(json({ Message: 'boom' }, 409))
+    expect(((await rejection(svc.apiPostQuiet('orders/1/approve', {}))) as ApiError).notified).toBe(false)
+  })
+
+  it('notify.error 가 없으면 false 다 — «통지 경로를 탔다» 가 아니라 «실제로 알렸다»', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ Message: 'boom' }, 409))
+    expect(((await rejection(svc.apiPost('orders/1/approve', {}))) as ApiError).notified).toBe(false)
+  })
+
+  it('ApiError 가 아닌 실패(네트워크)도 알렸다면 wasNotified 가 true 다', async () => {
+    const error = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, notify: { error } })
+    vi.stubGlobal('fetch', () => Promise.reject(new TypeError('Failed to fetch')))
+    const e = await rejection(svc.apiPost('orders/1/approve', {}))
+    expect(e).not.toBeInstanceOf(ApiError)
+    expect(error).toHaveBeenCalledWith('Failed to fetch')
+    expect(wasNotified(e)).toBe(true)
+  })
+
+  it('직접 만든 ApiError 와 원시값은 false 다 — 소비자가 표식을 세울 수 없다', () => {
+    const e = new ApiError('x', 500)
+    expect(e.notified).toBe(false)
+    expect(() => { (e as any).notified = true }).toThrow()
+    expect(wasNotified('boom')).toBe(false)
+    expect(wasNotified(undefined)).toBe(false)
   })
 })

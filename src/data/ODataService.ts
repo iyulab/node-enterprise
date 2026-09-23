@@ -49,6 +49,24 @@ function extractErrorDetails(raw: unknown): ApiErrorDetail[] | undefined {
 }
 
 /**
+ * 서비스가 `notify.error` 로 **사용자에게 이미 알린** 실패들 — 이 모듈만 채운다.
+ * ⚠에러 객체의 필드로 두지 않는다: 소비자가 세우거나 지울 수 있으면 표식이 «알렸다» 를 뜻하지 않게 된다.
+ */
+const notifiedFailures = new WeakSet<object>()
+
+/**
+ * 이 실패를 서비스가 `notify.error` 로 이미 사용자에게 알렸는가.
+ *
+ * 쓰기(`odataPost/Patch/Delete`·`apiPost/Put/Patch/Delete`) 실패는 알린 뒤 다시 던지고, 읽기·`*Quiet`·401 은
+ * 알리지 않는다 — 그 정책의 결과를 경계(전역 `unhandledrejection` 핸들러·error boundary)가 서비스 인스턴스
+ * 없이 읽는 자리다: `if (!wasNotified(err)) toast(message)`. `ApiError` 는 같은 사실을 `err.notified` 로도 준다.
+ * 네트워크 실패처럼 `ApiError` 가 아닌 것도 쓰기 경로에서 알렸다면 `true` 다.
+ */
+export function wasNotified(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && notifiedFailures.has(error)
+}
+
+/**
  * API 호출 실패 에러 — HTTP status 를 실어 호출부가 상태별 분기(예: 404 도메인 문구)를 할 수 있게 한다.
  * `Error` 를 상속하므로 기존 `e instanceof Error`/`e.message` 소비처는 그대로 동작한다.
  */
@@ -61,6 +79,14 @@ export class ApiError extends Error {
     this.name = 'ApiError'
     this.status = status
     this.details = details
+  }
+
+  /**
+   * 서비스가 이 실패를 `notify.error` 로 **이미 사용자에게 알렸는가** — 경계가 «알리지 않은 것만» 알리는 근거.
+   * `notify.error` 를 설정하지 않은 서비스에서는 알린 것이 없으므로 항상 `false` 다. 읽기 전용이다.
+   */
+  get notified(): boolean {
+    return notifiedFailures.has(this)
   }
 }
 
@@ -352,8 +378,9 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     try {
       return await run()
     } catch (e) {
-      if (!(e instanceof ApiError && e.status === 401)) {
-        notifyError?.(e instanceof Error ? e.message : messages.requestFailed)
+      if (notifyError && !(e instanceof ApiError && e.status === 401)) {
+        notifyError(e instanceof Error ? e.message : messages.requestFailed)
+        if (typeof e === 'object' && e !== null) notifiedFailures.add(e)
       }
       throw e
     }
