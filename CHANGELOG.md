@@ -17,6 +17,12 @@
 - **`odataGetPage(entity, params?, opts?)` and `odataGetNextPage(nextLink, opts?)`** for screens that
   read a page at a time. A page is `{ value, nextLink?, count? }` (`count` when `$count=true`); pass
   `nextLink` as given — it carries the server's continuation state.
+- **`odataGet(entity, params, { maxRows })` — an upper bound on the rows it collects.** Following
+  every page means a collection larger than a screen expects is read in full. With `maxRows`, the
+  read stops requesting further pages once it has more rows than that and throws a `RangeError`
+  instead of returning a shortened list (a collection of exactly `maxRows` rows passes). Without
+  it there is no bound. The options type is `ODataGetOptions`, which extends
+  `ODataRequestOptions`.
 
 ## [0.17.0] - 2026-09-23
 

@@ -99,6 +99,8 @@ export const svc = createODataService({
 await svc.odataGet<Order>('Orders', { $top: '20' })   // value 배열 언랩
 
 // 서버가 페이지를 자르면(@odata.nextLink) odataGet 은 끝까지 따라가 전량을 모은다.
+// maxRows 를 주면 그 수를 넘는 순간 남은 페이지를 읽지 않고 RangeError 를 던진다(자르지 않는다).
+await svc.odataGet<Order>('Orders', undefined, { maxRows: 5000 })
 // 페이지 단위로 읽어야 하는 화면은 페이지 API 를 쓴다 — nextLink 는 조립하지 말고 그대로 넘긴다.
 const page = await svc.odataGetPage<Order>('Orders', { $count: 'true' })  // { value, nextLink?, count? }
 if (page.nextLink) await svc.odataGetNextPage<Order>(page.nextLink)

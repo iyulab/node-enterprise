@@ -690,6 +690,44 @@ describe('서버 주도 페이징 — `@odata.nextLink` 를 버리지 않는다'
     expect(sent(1)).toBe(`${BASE}/$data/Orders?$skiptoken=1`)
   })
 
+  it('🔴maxRows 를 넘으면 남은 페이지를 읽지 않고 던진다 — 상한에서 자르지 않는다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ value: [{ id: 1 }, { id: 2 }], '@odata.nextLink': `${BASE}/$data/Orders?$skiptoken=2` }))
+    enqueue(json({ value: [{ id: 3 }], '@odata.nextLink': `${BASE}/$data/Orders?$skiptoken=3` }))
+    await expect(svc.odataGet('Orders', undefined, { maxRows: 2 })).rejects.toThrow(RangeError)
+    expect(recorded).toHaveLength(2)
+  })
+
+  it('첫 페이지가 이미 maxRows 를 넘으면 다음 페이지를 요청하지 않는다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ value: [{ id: 1 }, { id: 2 }], '@odata.nextLink': `${BASE}/$data/Orders?$skiptoken=2` }))
+    await expect(svc.odataGet('Orders', undefined, { maxRows: 1 })).rejects.toThrow(/more than 1 rows/)
+    expect(recorded).toHaveLength(1)
+  })
+
+  it('정확히 maxRows 만큼인 컬렉션은 통과한다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ value: [{ id: 1 }, { id: 2 }], '@odata.nextLink': `${BASE}/$data/Orders?$skiptoken=2` }))
+    enqueue(json({ value: [{ id: 3 }] }))
+    expect(await svc.odataGet('Orders', undefined, { maxRows: 3 })).toHaveLength(3)
+  })
+
+  it('maxRows 가 양의 정수가 아니면 요청 전에 던진다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    for (const bad of [0, -1, 1.5, Number.NaN]) {
+      await expect(svc.odataGet('Orders', undefined, { maxRows: bad })).rejects.toThrow(/positive integer/)
+    }
+    expect(recorded).toHaveLength(0)
+  })
+
+  it('maxRows 는 요청 옵션과 함께 쓸 수 있다 — 401 예외 축은 그대로', async () => {
+    const onUnauthorized = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, onUnauthorized })
+    enqueue(json({}, 401))
+    await expect(svc.odataGet('Orders', undefined, { maxRows: 10, onUnauthorized: false })).rejects.toMatchObject({ status: 401 })
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
   it('odataGetNextPage 도 오리진 밖 URL 을 거부한다(요청 전에)', async () => {
     const svc = createODataService({ baseUrl: BASE })
     await expect(svc.odataGetNextPage('https://elsewhere.test/x')).rejects.toThrow(/outside the service origin/)

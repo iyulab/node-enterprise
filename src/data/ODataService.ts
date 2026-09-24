@@ -146,6 +146,21 @@ export interface ODataRequestOptions {
 }
 
 /**
+ * `odataGet` 전용 옵션 — 요청 옵션에 **모을 행 수의 상한**을 더한다.
+ *
+ * 🔴**상한을 넘으면 던진다 — 자르지 않는다.** `odataGet` 의 계약은 «전량» 이라, 상한에서 조용히 멈추면
+ * 잘린 목록이 전량처럼 보이는 바로 그 실패로 돌아간다. 그 크기가 정상인 화면은 `odataGetPage` 로
+ * 페이지 단위로 읽는다.
+ */
+export interface ODataGetOptions extends ODataRequestOptions {
+  /**
+   * 모을 행 수의 상한(양의 정수). 서버 페이지를 따라가다 이 수를 **넘으면** 남은 페이지를 읽지 않고
+   * `RangeError` 를 던진다 — 정확히 이 수만큼 있는 컬렉션은 통과한다. 생략하면 상한이 없다.
+   */
+  maxRows?: number
+}
+
+/**
  * 서버가 자른 컬렉션의 한 페이지(OData v4 서버 주도 페이징).
  *
  * `nextLink` 는 서버가 준 **다음 페이지 URL** 이다 — 조립하지 말고 `odataGetNextPage` 에 그대로 넘긴다
@@ -204,8 +219,9 @@ export interface ODataService {
    *
    * ⚠`nextLink` 가 서비스의 오리진 밖을 가리키거나 이미 읽은 URL 로 되돌아오면 **던진다** —
    * 조용히 멈추면 잘린 목록이 전량처럼 보이고, 그것이 이 동작이 막으려는 실패다.
+   * 모은 행이 `opts.maxRows` 를 넘어도 같은 이유로 던진다(`RangeError`).
    */
-  odataGet<T>(entity: string, params?: Record<string, string>, opts?: ODataRequestOptions): Promise<T[]>
+  odataGet<T>(entity: string, params?: Record<string, string>, opts?: ODataGetOptions): Promise<T[]>
   /** OData GET(목록) 한 페이지 — `value` 와 함께 `nextLink`·`count` 를 준다. */
   odataGetPage<T>(entity: string, params?: Record<string, string>, opts?: ODataRequestOptions): Promise<ODataPage<T>>
   /** `ODataPage.nextLink` 가 가리키는 다음 페이지. 오리진 규칙은 `odataGet` 과 같다. */
@@ -391,11 +407,19 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     return page
   }
 
-  async function odataGet<T>(entity: string, params?: Record<string, string>, opts?: ODataRequestOptions): Promise<T[]> {
+  async function odataGet<T>(entity: string, params?: Record<string, string>, opts?: ODataGetOptions): Promise<T[]> {
+    const maxRows = opts?.maxRows
+    if (maxRows !== undefined && !(Number.isInteger(maxRows) && maxRows > 0)) {
+      throw new RangeError(`odataGet maxRows must be a positive integer (got ${maxRows})`)
+    }
+    const overLimit = () =>
+      new RangeError(`OData collection '${entity}' has more than ${maxRows} rows (maxRows); read it with odataGetPage or narrow the query`)
+
     let url = collectionUrl(entity, params)
     const seen = new Set<string>([url])
     let page = await getPage<T>(url, opts)
     const rows = [...page.value]
+    if (maxRows !== undefined && rows.length > maxRows) throw overLimit()
     while (page.nextLink) {
       if (seen.has(page.nextLink)) {
         throw new Error(`OData nextLink repeats an already-read page (${page.nextLink}); the collection cannot be completed`)
@@ -404,6 +428,7 @@ export function createODataService(config: ODataServiceConfig): ODataService {
       seen.add(url)
       page = await getPage<T>(url, opts)
       rows.push(...page.value)
+      if (maxRows !== undefined && rows.length > maxRows) throw overLimit()
     }
     return rows
   }
