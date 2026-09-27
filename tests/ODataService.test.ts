@@ -734,3 +734,97 @@ describe('서버 주도 페이징 — `@odata.nextLink` 를 버리지 않는다'
     expect(recorded).toHaveLength(0)
   })
 })
+
+/**
+ * `onMutated` — 쓰기 성공을 관찰하는 자리. 서비스가 쓰기를 전부 소유하므로 «쓰기 뒤 무효화» 의
+ * 관찰 지점도 서비스가 낸다. 소비자가 쓰기 메서드를 한 겹씩 감싸면 새 메서드가 생길 때 조용히 빠진다.
+ */
+describe('createODataService — onMutated', () => {
+  const setup = () => {
+    const onMutated = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, onMutated, notify: { success: vi.fn(), error: vi.fn() } })
+    return { svc, onMutated }
+  }
+
+  it('🔴모든 쓰기 메서드가 성공 뒤 정확히 한 번 알린다 — 조용한 변형 포함', async () => {
+    const { svc, onMutated } = setup()
+    const calls: [string, () => Promise<unknown>, unknown][] = [
+      ['odataPost', () => svc.odataPost('Orders', { a: 1 }), { method: 'POST', source: 'odata', target: 'Orders' }],
+      ['odataPostQuiet', () => svc.odataPostQuiet('Orders', { a: 1 }), { method: 'POST', source: 'odata', target: 'Orders' }],
+      ['odataPatch', () => svc.odataPatch('Orders', '7', { a: 1 }), { method: 'PATCH', source: 'odata', target: 'Orders', id: '7' }],
+      ['odataPatchQuiet', () => svc.odataPatchQuiet('Orders', '7', { a: 1 }), { method: 'PATCH', source: 'odata', target: 'Orders', id: '7' }],
+      ['odataDelete', () => svc.odataDelete('Orders', '7'), { method: 'DELETE', source: 'odata', target: 'Orders', id: '7' }],
+      ['odataDeleteQuiet', () => svc.odataDeleteQuiet('Orders', '7'), { method: 'DELETE', source: 'odata', target: 'Orders', id: '7' }],
+      ['apiPost', () => svc.apiPost('orders/7/approve'), { method: 'POST', source: 'api', target: 'orders/7/approve' }],
+      ['apiPostQuiet', () => svc.apiPostQuiet('orders/7/approve'), { method: 'POST', source: 'api', target: 'orders/7/approve' }],
+      ['apiPut', () => svc.apiPut('settings', {}), { method: 'PUT', source: 'api', target: 'settings' }],
+      ['apiPutQuiet', () => svc.apiPutQuiet('settings', {}), { method: 'PUT', source: 'api', target: 'settings' }],
+      ['apiPatch', () => svc.apiPatch('settings', {}), { method: 'PATCH', source: 'api', target: 'settings' }],
+      ['apiPatchQuiet', () => svc.apiPatchQuiet('settings', {}), { method: 'PATCH', source: 'api', target: 'settings' }],
+      ['apiDelete', () => svc.apiDelete('files/3'), { method: 'DELETE', source: 'api', target: 'files/3' }],
+      ['apiDeleteQuiet', () => svc.apiDeleteQuiet('files/3'), { method: 'DELETE', source: 'api', target: 'files/3' }],
+    ]
+    for (const [name, run, expected] of calls) {
+      onMutated.mockClear()
+      enqueue(json({ id: 1 }))
+      await run()
+      expect(onMutated, name).toHaveBeenCalledTimes(1)
+      expect(onMutated.mock.calls[0][0], name).toEqual(expected)
+    }
+  })
+
+  it('🔴서비스의 쓰기 메서드 목록과 위 표가 어긋나지 않는다 — 새 쓰기가 생기면 여기서 드러난다', () => {
+    const { svc } = setup()
+    const writes = Object.keys(svc)
+      .filter((k) => /^(odata|api)(Post|Put|Patch|Delete)/.test(k))
+      .sort()
+    expect(writes).toEqual([
+      'apiDelete', 'apiDeleteQuiet', 'apiPatch', 'apiPatchQuiet', 'apiPost', 'apiPostQuiet', 'apiPut', 'apiPutQuiet',
+      'odataDelete', 'odataDeleteQuiet', 'odataPatch', 'odataPatchQuiet', 'odataPost', 'odataPostQuiet',
+    ])
+  })
+
+  it('실패한 쓰기에는 부르지 않는다', async () => {
+    const { svc, onMutated } = setup()
+    enqueue(json({ error: { message: 'nope' } }, 400))
+    await expect(svc.odataPost('Orders', { a: 1 })).rejects.toBeInstanceOf(ApiError)
+    enqueue(json({ error: { message: 'nope' } }, 500))
+    await expect(svc.apiPostQuiet('x')).rejects.toBeInstanceOf(ApiError)
+    expect(onMutated).not.toHaveBeenCalled()
+  })
+
+  it('읽기에는 부르지 않는다', async () => {
+    const { svc, onMutated } = setup()
+    enqueue(json({ value: [] }))
+    await svc.odataGet('Orders')
+    enqueue(json({ id: 1 }))
+    await svc.odataGetById('Orders', '1')
+    enqueue(json({ ok: true }))
+    await svc.apiGet('ping')
+    enqueue(json({}))
+    await svc.fetchRaw(`${BASE}/x`)
+    expect(onMutated).not.toHaveBeenCalled()
+  })
+
+  it('🔴콜백이 던져도 쓰기는 성공으로 끝난다 — 실패 토스트도 나지 않는다', async () => {
+    const error = vi.fn()
+    const success = vi.fn()
+    const report = vi.fn()
+    vi.stubGlobal('reportError', report)
+    try {
+      const svc = createODataService({
+        baseUrl: BASE,
+        notify: { success, error },
+        onMutated: () => { throw new Error('observer broke') },
+      })
+      enqueue(json({ id: 9 }))
+      await expect(svc.odataPost('Orders', { a: 1 })).resolves.toEqual({ id: 9 })
+      expect(error).not.toHaveBeenCalled()
+      expect(success).toHaveBeenCalledTimes(1)
+      expect(report).toHaveBeenCalledTimes(1)
+      expect((report.mock.calls[0][0] as Error).message).toBe('observer broke')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+})

@@ -138,8 +138,30 @@ await svc.apiPost<Order>('orders/7/attachments', form)
 | `odataPrefix` / `apiPrefix` | 엔드포인트 prefix (기본 `$data` / `api`) |
 | `onUnauthorized(status)` | 401 시 호출 — 리다이렉트/재진입 가드는 앱이 처리 |
 | `notify.success/error` | 토스트 훅 (생략 시 토스트 없음 — 순수). **메서드마다 걸리는 방식이 다르다 — 바로 아래 표 참조** |
+| `onMutated(mutation)` | 쓰기가 성공(2xx)한 뒤 한 번 — 캐시 무효화 자리. 아래 절 참조 (`0.19.0~`) |
 | `messages` | 사용자 대면 문구 (기본 영어, 지정 키만 대체) |
 | `formatError(info)` | 에러 메시지 포매팅 오버라이드 (앱별 정책) — `info` 는 `status`/`statusText`/`rawMessage`/`details`(검증된 `error.details`)/`body` 를 받는다 |
+
+#### `onMutated` — 쓰기 뒤 무효화
+
+목록·상세·대시보드가 같은 데이터를 따로 들고 있으면, 한쪽에서 저장한 뒤 다른 쪽이 낡는다
+(예: 목록 위 오버레이에서 상세를 저장하고 닫으면 목록은 재마운트되지 않는다). 서비스가 쓰기를
+전부 소유하므로 «무엇이 쓰였는가» 도 서비스가 알린다 — 쓰기 메서드를 한 겹씩 감쌀 필요가 없다.
+
+```typescript
+export const svc = createODataService({
+  baseUrl: window.location.origin,
+  onMutated: ({ method, source, target, id }) => invalidate(source === 'odata' ? target : 'api'),
+})
+```
+
+- **성공한 쓰기마다 한 번** — `odata*`·`api*` 의 `Post`/`Put`/`Patch`/`Delete` 와 그 `*Quiet` 변형 전부.
+  토스트 여부와 무관하다.
+- **실패한 쓰기·읽기(`fetchRaw` 포함)에는 부르지 않는다.**
+- `mutation` = `{ method, source: 'odata' | 'api', target, id? }` — `target` 은 `odata` 면 엔티티 셋
+  이름, `api` 면 넘긴 경로 그대로. `id` 는 키로 지정한 쓰기(`odataPatch`·`odataDelete`)에만.
+- 콜백이 던져도 쓰기는 성공으로 끝난다(예외는 `reportError` 로 보고) — 관찰자의 실패가
+  «저장 실패» 로 보이면 안 된다.
 
 #### `notify` 가 걸리는 자리 — 축은 «쓰기 ↔ 읽기» 다
 

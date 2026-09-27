@@ -174,6 +174,18 @@ export interface ODataPage<T> {
   count?: number
 }
 
+/** `ODataServiceConfig.onMutated` 가 받는 정보 — 무엇이 어디에 쓰였는가. */
+export interface ODataMutation {
+  /** HTTP 메서드. */
+  method: 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  /** `odata*` 로 보낸 쓰기인가, `api*` 로 보낸 쓰기인가. `target` 의 뜻이 이것으로 갈린다. */
+  source: 'odata' | 'api'
+  /** `source: 'odata'` 면 엔티티 셋 이름, `'api'` 면 호출에 넘긴 경로 그대로. */
+  target: string
+  /** 키로 지정한 쓰기(`odataPatch`·`odataDelete`)의 키. */
+  id?: string
+}
+
 export interface ODataServiceConfig {
   /** 모든 요청의 베이스 URL (예: `window.location.origin`). 슬래시 없이 오리진만. */
   baseUrl: string
@@ -191,6 +203,12 @@ export interface ODataServiceConfig {
     success?: (message: string) => void
     error?: (message: string) => void
   }
+  /**
+   * 쓰기가 성공(2xx)으로 끝난 뒤 한 번 호출된다 — 목록·상세가 같은 데이터를 따로 들고 있는
+   * 앱이 캐시를 무효화하는 자리다. 조용한 변형(`*Quiet`)도 포함하고, 실패한 쓰기와 읽기에는
+   * 부르지 않는다. 이 콜백이 던져도 쓰기의 결과는 바뀌지 않는다(예외는 `reportError` 로 보고).
+   */
+  onMutated?: (mutation: ODataMutation) => void
   /** 사용자 대면 문구 오버라이드(로케일). 지정한 키만 기본값을 대체한다. */
   messages?: Partial<ODataServiceMessages>
   /**
@@ -324,6 +342,20 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   }
   const notifySuccess = config.notify?.success
   const notifyError = config.notify?.error
+
+  /**
+   * 성공한 쓰기를 알린다. 쓰기는 이미 끝났으므로 관찰자의 예외가 호출자에게 «쓰기 실패» 로
+   * 보여서는 안 된다 — 던지면 `notifyingWrite` 가 실패 토스트까지 낸다.
+   */
+  function mutated(mutation: ODataMutation): void {
+    if (!config.onMutated) return
+    try {
+      config.onMutated(mutation)
+    } catch (e) {
+      if (typeof globalThis.reportError === 'function') globalThis.reportError(e)
+      else console.error(e)
+    }
+  }
 
   // baseUrl 은 우리가 URL 조립 시 직접 붙이므로 client 에는 넘기지 않는다(이중 prefix 방지).
   const client = new HttpClient({})
@@ -485,7 +517,9 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   async function odataPostQuiet<T>(entity: string, body: Partial<T>, opts?: ODataRequestOptions): Promise<T> {
     const res = await client.post(odataUrl(entity), normalizeBody(body))
     await throwIfError(res, opts)
-    return res.json<T>()
+    const result = await res.json<T>()
+    mutated({ method: 'POST', source: 'odata', target: entity })
+    return result
   }
 
   async function odataPost<T>(entity: string, body: Partial<T>, opts?: ODataRequestOptions): Promise<T> {
@@ -499,6 +533,7 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   async function odataPatchQuiet<T>(entity: string, id: string, body: Partial<T>, opts?: ODataRequestOptions): Promise<void> {
     const res = await client.patch(`${odataUrl(entity)}(${id})`, normalizeBody(body))
     await throwIfError(res, opts)
+    mutated({ method: 'PATCH', source: 'odata', target: entity, id })
   }
 
   async function odataPatch<T>(entity: string, id: string, body: Partial<T>, opts?: ODataRequestOptions): Promise<void> {
@@ -511,6 +546,7 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   async function odataDeleteQuiet(entity: string, id: string, opts?: ODataRequestOptions): Promise<void> {
     const res = await client.delete(`${odataUrl(entity)}(${id})`)
     await throwIfError(res, opts)
+    mutated({ method: 'DELETE', source: 'odata', target: entity, id })
   }
 
   async function odataDelete(entity: string, id: string, opts?: ODataRequestOptions): Promise<void> {
@@ -532,7 +568,9 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   async function apiPostQuiet<T>(path: string, body?: unknown, opts?: ODataRequestOptions): Promise<T> {
     const res = await client.post(apiUrl(path), body ?? {})
     await throwIfError(res, opts)
-    return parseJsonBody<T>(res)
+    const result = await parseJsonBody<T>(res)
+    mutated({ method: 'POST', source: 'api', target: path })
+    return result
   }
 
   async function apiPost<T>(path: string, body?: unknown, opts?: ODataRequestOptions): Promise<T> {
@@ -542,7 +580,9 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   async function apiPutQuiet<T>(path: string, body?: unknown, opts?: ODataRequestOptions): Promise<T> {
     const res = await client.put(apiUrl(path), body ?? {})
     await throwIfError(res, opts)
-    return parseJsonBody<T>(res)
+    const result = await parseJsonBody<T>(res)
+    mutated({ method: 'PUT', source: 'api', target: path })
+    return result
   }
 
   async function apiPut<T>(path: string, body?: unknown, opts?: ODataRequestOptions): Promise<T> {
@@ -552,7 +592,9 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   async function apiPatchQuiet<T>(path: string, body?: unknown, opts?: ODataRequestOptions): Promise<T> {
     const res = await client.patch(apiUrl(path), body ?? {})
     await throwIfError(res, opts)
-    return parseJsonBody<T>(res)
+    const result = await parseJsonBody<T>(res)
+    mutated({ method: 'PATCH', source: 'api', target: path })
+    return result
   }
 
   async function apiPatch<T>(path: string, body?: unknown, opts?: ODataRequestOptions): Promise<T> {
@@ -562,7 +604,9 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   async function apiDeleteQuiet<T = void>(path: string, opts?: ODataRequestOptions): Promise<T> {
     const res = await client.delete(apiUrl(path))
     await throwIfError(res, opts)
-    return parseJsonBody<T>(res)
+    const result = await parseJsonBody<T>(res)
+    mutated({ method: 'DELETE', source: 'api', target: path })
+    return result
   }
 
   async function apiDelete<T = void>(path: string, opts?: ODataRequestOptions): Promise<T> {
