@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.19.0] - 2026-09-27
+
+### Added
+
+- **`onMutated` on `createODataService`** — called once after every successful write (`odata*` and
+  `api*` POST/PUT/PATCH/DELETE, including the `*Quiet` variants) with
+  `{ method, source, target, id? }`. Apps that keep the same data in several places (a list with a
+  detail overlay on top, a dashboard) can invalidate from one hook instead of wrapping every write
+  method — a wrapper silently misses a write method added later. Not called for failed writes or
+  reads. If the callback throws, the write still resolves; the error goes to `reportError`.
+
 ## [0.18.0] - 2026-09-24
 
 ### Fixed
