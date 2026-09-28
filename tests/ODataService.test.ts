@@ -120,7 +120,6 @@ describe('createODataService — mutations + toasts', () => {
     expect(success).toHaveBeenCalledWith('삭제되었습니다')
   })
 
-  // §D-33 / ISSUE-enterprise-20260812-odataservice-missing-quiet-patch-delete:
   // odataPostQuiet은 이미 있는데 PATCH/DELETE에는 quiet 짝이 없어, 자식 컬렉션을
   // 편집하고 부모의 파생 필드를 동기화하는 한 사용자 액션이 토스트 두 번을 내는
   // 문제를 피할 방법이 raw fetch() 우회뿐이었다.
@@ -285,7 +284,7 @@ describe('createODataService — errors', () => {
 
   // odataPatch/odataDelete는 이전에 throwIfError를 쓰지 않고 401/에러 처리를 각자
   // 인라인으로 중복 구현하고 있었다 — quiet 짝을 추가하며 throwIfError 재사용으로
-  // 리팩터(§D-33) 했으므로, 그 리팩터가 기존 동작(에러 토스트·401 처리)을 그대로
+  // 리팩터 했으므로, 그 리팩터가 기존 동작(에러 토스트·401 처리)을 그대로
   // 보존하는지 PATCH/DELETE 각각으로 직접 확인한다(이전엔 POST로만 커버돼 있었다).
   it('odataPatch non-401 error fires error toast and throws ApiError with status', async () => {
     const error = vi.fn()
@@ -390,7 +389,7 @@ describe('createODataService — custom REST', () => {
     expect(recorded[0].contentType).toContain('application/json')
   })
 
-  // docket #108 — 요청 본문은 apiPut 부재와 함께 "FormData가 JSON으로 강제 직렬화될 것"이라는
+  // 원 요청은 apiPut 부재와 함께 "FormData가 JSON으로 강제 직렬화될 것"이라는
   // 우려도 제기했다. 실측: @iyulab/http-client의 guessMimeType이 FormData에는 Content-Type을
   // 세팅하지 않고(브라우저가 멀티파트 boundary와 함께 자동 설정) JSON.stringify 분기도
   // Content-Type이 application/json일 때만 타므로, apiPost/apiPatch/apiPut 전부 FormData를
@@ -409,7 +408,7 @@ describe('createODataService — custom REST', () => {
   )
 })
 
-// docket #359 — `notify.error` 가 `odata*` 쓰기에만 걸리고 `api*` 에는 걸리지 않아, 서버가 409 와
+// `notify.error` 가 `odata*` 쓰기에만 걸리고 `api*` 에는 걸리지 않아, 서버가 409 와
 // 사유를 정확히 돌려줘도 화면에 **아무것도 뜨지 않았다**. 실측된 소비앱의 업무 쓰기 경로 12곳이
 // 전부 `api*` 였다. ★축은 «odata ↔ api» 가 아니라 «쓰기 ↔ 읽기» 다 — 조회는 양쪽 다 침묵한다.
 describe('createODataService — 실패 통지의 축은 «쓰기 ↔ 읽기»', () => {
@@ -552,7 +551,7 @@ describe('fetchRaw — 「raw」 는 정책을 태우지 않는다는 뜻이다'
   })
 })
 
-// docket #415 — «이 실패를 사용자에게 알렸는가» 는 `notifyingWrite` 안에서만 확정된다. 에러와 함께
+// «이 실패를 사용자에게 알렸는가» 는 `notifyingWrite` 안에서만 확정된다. 에러와 함께
 // 이동해야 경계(전역 거부 핸들러·error boundary)가 서비스 없이 «알리지 않은 것만» 알릴 수 있다.
 describe('ApiError.notified — 알렸다는 사실이 에러와 함께 간다', () => {
   const writes = [
