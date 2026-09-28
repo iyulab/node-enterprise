@@ -40,11 +40,8 @@ describe('server-driven paging (JSON Format §4.5.5 · Protocol §11.2.6.7)', ()
     const rows = await svc().odataGet<{ ID: string }>('Customers')
     expect(rows.map(r => r.ID)).toEqual(['ALFKI', 'ANATR', 'ANTON'])
     // 상대 URL 은 요청한 URL 기준으로 풀린다(RFC 3986 §5).
-    // ⚠의미로 잰다 — 요청 경로가 쿼리를 폼 인코딩으로 다시 직렬화해 달러 기호가 %24 로 나간다
-    //   (README 적합성 표의 «opaque nextLink» 행 · 주요 서버는 같은 요청으로 디코드한다).
-    const next = new URL(recorded[1].url)
-    expect(next.origin + next.pathname).toBe(BASE + '/service/Customers')
-    expect(next.searchParams.get('$skiptoken')).toBe('2')
+    // 링크는 불투명하게 — 서버가 쓴 쿼리가 바이트 그대로 나간다(@iyulab/http-client 0.10.3 부터).
+    expect(recorded[1].url).toBe(BASE + '/service/Customers?$skiptoken=2')
   })
 
   it('a single page carries nextLink and count for callers that page themselves', async () => {

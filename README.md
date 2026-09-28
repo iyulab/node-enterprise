@@ -270,7 +270,7 @@ window.addEventListener('unhandledrejection', (ev) => {
 | 조항 | 상태 | 메모 |
 |---|---|---|
 | 서버 주도 페이징 — `@odata.nextLink`(상대·절대) | 구현 | `odataGet` 은 끝까지 따라가고, `odataGetPage` 는 `nextLink` 를 준다. 서비스 오리진 밖 · 이미 읽은 링크로의 순환은 던진다 |
-| `nextLink` 를 불투명하게 따라가기(Protocol §11.2.6.7) | 부분 | 요청 경로가 쿼리를 폼 인코딩으로 다시 직렬화한다(`$skiptoken` → `%24skiptoken`). 주요 서버는 같은 요청으로 디코드한다 |
+| `nextLink` 를 불투명하게 따라가기(Protocol §11.2.6.7) | 구현 | 서버가 쓴 쿼리가 바이트 그대로 나간다(`@iyulab/http-client` 0.10.3 이상 — 범위 `^0.10.0` 이면 재설치로 받는다) |
 | `$count=true` → `@odata.count` · `odataCount` | 구현 | `odataCount` 는 `$top=0&$count=true` 로 행 없이 건수만 |
 | 오류 봉투 — `error.code`·`message`·`details[]`(`code`·`message`·`target`) | 구현 | `ApiError.message`·`ApiError.details` · `innererror` 는 싣지 않는다(서버의 디버깅용이지 계약이 아니다) |
 | 생성 201 · 수정/삭제 204 No Content | 구현 | 빈 바디를 파싱하지 않는다 |

@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.20.1] - 2026-09-28
+
+### Fixed
+
+- **A server-issued `@odata.nextLink` is followed exactly as written.** `odataGet` and
+  `odataGetNextPage` sent the link's query re-encoded (`$skiptoken` → `%24skiptoken`). Requires
+  `@iyulab/http-client` 0.10.3, now the minimum.
+
+### Documentation
+
+- The README gains an **OData v4 conformance** table: what the service implements, partly implements
+  or leaves out, each backed by a test that replays the specification's own example responses.
+
 ## [0.20.0] - 2026-09-28
 
 ### Changed
