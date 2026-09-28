@@ -261,6 +261,24 @@ window.addEventListener('unhandledrejection', (ev) => {
 `wasNotified(err)` 는 `ApiError` 가 아닌 실패(네트워크 오류 등)에도 같은 답을 준다 — 쓰기 경로에서 알렸다면
 `true`. 표식은 서비스만 세울 수 있다(에러 객체의 필드가 아니다).
 
+#### OData v4 적합성 (conformance)
+
+서비스가 OData v4 의 어느 조항을 따르는지 — «구현» 행은 전부 `tests/odata-conformance.test.ts` 가
+**명세의 예시 응답 모양**으로 잰다. 서버가 새 조항을 쓰기 시작하는 날(서버 주도 페이징 등) 소비자가
+먼저 깨지지 않게 하려는 표다.
+
+| 조항 | 상태 | 메모 |
+|---|---|---|
+| 서버 주도 페이징 — `@odata.nextLink`(상대·절대) | 구현 | `odataGet` 은 끝까지 따라가고, `odataGetPage` 는 `nextLink` 를 준다. 서비스 오리진 밖 · 이미 읽은 링크로의 순환은 던진다 |
+| `nextLink` 를 불투명하게 따라가기(Protocol §11.2.6.7) | 부분 | 요청 경로가 쿼리를 폼 인코딩으로 다시 직렬화한다(`$skiptoken` → `%24skiptoken`). 주요 서버는 같은 요청으로 디코드한다 |
+| `$count=true` → `@odata.count` · `odataCount` | 구현 | `odataCount` 는 `$top=0&$count=true` 로 행 없이 건수만 |
+| 오류 봉투 — `error.code`·`message`·`details[]`(`code`·`message`·`target`) | 구현 | `ApiError.message`·`ApiError.details` · `innererror` 는 싣지 않는다(서버의 디버깅용이지 계약이 아니다) |
+| 생성 201 · 수정/삭제 204 No Content | 구현 | 빈 바디를 파싱하지 않는다 |
+| 키 리터럴(URL Conventions §4.3.1) | 호출자 | `id` 는 URL 에 쓰이는 리터럴 그대로다 — GUID·숫자는 그대로, 문자열 키는 호출자가 `'…'` 로 감싸고 `'` 를 `''` 로. 클라이언트는 메타데이터 없이 둘을 가를 수 없다 |
+| 낙관적 동시성 — ETag · `If-Match` · 412 | 미구현 | 서버 지원 확인 뒤에 연다 |
+| `Prefer`(`return=…` · `odata.maxpagesize`) · `$batch` · `@odata.deltaLink` | 미구현 | |
+| `429` · `Retry-After` | 미구현 | 다른 오류와 같이 `ApiError` 로 던진다(재시도하지 않는다) |
+
 
 ### 인증 + 권한 (`createAuthClient` · 권한 store)
 
