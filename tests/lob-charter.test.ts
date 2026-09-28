@@ -53,8 +53,9 @@ describe('LOB 계층 헌장 — 문서와 구현의 정합', () => {
       .filter(Boolean) as string[];
     expect(provided.length).toBeGreaterThan(0); // 표 파싱이 깨지면 아래 대조가 무의미해진다
 
-    const index = read('src/index.ts');
-    expect(provided.filter(name => !index.includes(`export { ${name} }`))).toEqual([]);
+    // 공개 엔트리는 루트와 `./react` 둘이다 — React 컴포넌트는 후자에만 있다.
+    const entries = read('src/index.ts') + read('src/react.ts');
+    expect(provided.filter(name => !entries.includes(`export { ${name} }`))).toEqual([]);
   });
 
   it('★"만들지 않는다"로 등재된 패턴이 구현돼 있지 않다', () => {
@@ -63,7 +64,7 @@ describe('LOB 계층 헌장 — 문서와 구현의 정합', () => {
     const forbidden = [...charter().matchAll(/^\| ([A-Za-z]+)\([^)]*\) \| ○ 요구 \| ❌/gm)].map(m => m[1]);
     expect(forbidden.length).toBeGreaterThan(0);
 
-    const exported = read('src/index.ts');
+    const exported = read('src/index.ts') + read('src/react.ts');
     expect(forbidden.filter(name => exported.includes(name))).toEqual([]);
   });
 

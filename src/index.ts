@@ -3,8 +3,7 @@
  * Enterprise utilities and components for iyulab framework
  */
 
-export { FormSection } from './FormSection'
-export { FormRow } from './FormRow'
+// React components live on the `./react` subpath (react is an optional peer).
 
 // Enterprise helpers
 export * from './helpers';

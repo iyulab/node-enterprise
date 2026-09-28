@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- **`FormSection` and `FormRow` moved to `@iyulab/enterprise/react`, and `react` is now an
+  optional peer dependency.** The root entry exported them, so `react` had to be a required peer
+  and npm installed React into every app that used this package — including Lit apps that only
+  load the preset or the data services. The root entry no longer imports React. **Migration:**
+  `import { FormSection, FormRow } from '@iyulab/enterprise/react'`.
+
 ## [0.19.0] - 2026-09-27
 
 ### Added

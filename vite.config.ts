@@ -25,6 +25,7 @@ export default defineConfig({
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
         icons: resolve(__dirname, 'src/icons.ts'),
+        react: resolve(__dirname, 'src/react.ts'),
       },
       formats: ['es'],
       fileName: (format, entry) => {

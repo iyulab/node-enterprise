@@ -14,8 +14,8 @@ npm install @iyulab/enterprise
 
 | Export | 종류 | 용도 |
 |--------|------|------|
-| `FormSection` | React | 제목 + 세로 스택 폼 섹션 |
-| `FormRow` | React | 2컬럼 그리드 폼 행(`full`로 1컬럼) |
+| `FormSection` | React (`/react`) | 제목 + 세로 스택 폼 섹션 |
+| `FormRow` | React (`/react`) | 2컬럼 그리드 폼 행(`full`로 1컬럼) |
 | `ApiConfig` | class | baseUrl/OData·API prefix·dev 판별 중앙 설정 |
 | `createODataService` | factory | OData v4 + custom REST CRUD 서비스(401·토스트·에러파싱) |
 | `ApiError` | class | HTTP status + OData `error.details`(필드별 검증 상세)를 실은 API 호출 실패 에러 |
@@ -37,8 +37,10 @@ npm install @iyulab/enterprise
 
 ### 폼 레이아웃 (React)
 
+React 컴포넌트는 `@iyulab/enterprise/react` 서브패스에 있습니다. `react` 는 선택 peer 의존이라, React 를 쓰지 않는 앱(프리셋·데이터 서비스·인증 클라이언트만 쓰는 앱)에는 설치되지 않습니다.
+
 ```tsx
-import { FormSection, FormRow } from '@iyulab/enterprise'
+import { FormSection, FormRow } from '@iyulab/enterprise/react'
 
 <FormSection title="기본 정보">
   <FormRow>
