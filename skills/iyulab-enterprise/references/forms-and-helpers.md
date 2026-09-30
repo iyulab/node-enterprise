@@ -69,8 +69,8 @@ ApiConfig.getUrlWithParams('report', { year: 2026, active: true, q: undefined })
                                              // https://api.example.com/api/report?year=2026&active=true
 ```
 
-URLs are built as `${baseUrl}/${prefix}/…`, so leave `baseUrl` as `''` (the default) for
-same-origin root-relative URLs (`/$data/Orders`) and never end it with `/`.
+URLs are built as `${baseUrl}/${prefix}/…`. A trailing `/` on `baseUrl` and slashes around the
+prefixes are ignored, so `''` and `'/'` both give same-origin root-relative URLs (`/$data/Orders`).
 
 | Member | Purpose |
 |---|---|
@@ -94,15 +94,16 @@ All helpers are static classes. Missing or unparsable input renders as
 
 | Method | Result |
 |---|---|
-| `formatDate(date)` | `YYYY-MM-DD` (from the ISO/UTC string) |
-| `formatDateTime(date)` | `YYYY-MM-DD HH:mm` (UTC) |
-| `formatLocalDate(date, locale = 'ko-KR', options?)` | `toLocaleDateString` (default: numeric year, 2-digit month/day) |
+| `formatDate(date)` | `YYYY-MM-DD` — the local calendar date |
+| `formatDateTime(date)` | `YYYY-MM-DD HH:mm` — local date and time |
+| `formatLocalDate(date, locale = Locale.get(), options?)` | `toLocaleDateString` (default: numeric year, 2-digit month/day) |
 | `getDaysDifference(start, end)` | Whole days, rounded up; positive when `end` is later |
 | `getDaysFromNow(target)` | Days from today's midnight; negative when overdue |
 | `isToday`, `isPast`, `isFuture` | `boolean` |
 | `addDays(date, days)`, `startOfDay(date)`, `endOfDay(date)` | New `Date` (input not mutated) |
 
-`formatDate`/`formatDateTime` use UTC; prefer `formatLocalDate` for local calendar dates.
+All methods use one time model — the local calendar. A date-only string (`'2026-09-29'`) is read as that
+day in the local time zone; a string with a time and offset (`'…T18:30:00Z'`) is read as that instant.
 
 ### `UrgencyHelper`
 

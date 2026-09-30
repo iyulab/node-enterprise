@@ -5,8 +5,17 @@ iyulab 프레임워크의 엔터프라이즈 통합 패키지. 폼 레이아웃 
 ## Installation
 
 ```bash
-npm install @iyulab/enterprise
+npm install @iyulab/enterprise @iyulab/components
 ```
+
+`@iyulab/components` 는 필수 peer 다(로케일·포맷·디자인 토큰). React 폼 레이아웃(`/react`)을 쓰면 `react` 도 필요하다.
+
+| 진입점 | 내용 |
+|--------|------|
+| `@iyulab/enterprise` | 아래 표의 고유 export |
+| `@iyulab/enterprise/react` | `FormSection` · `FormRow` |
+| `@iyulab/enterprise/icons` | `house` 아이콘 라이브러리 등록(부수효과 import) |
+| `@iyulab/enterprise/styles/preset.css` | LOB 프리셋 시트 — 층 순서는 [docs/lob-layers.md](./docs/lob-layers.md) |
 
 ## 무엇을 제공하나
 
@@ -22,8 +31,8 @@ npm install @iyulab/enterprise
 | `wasNotified` | function | 이 실패를 서비스가 `notify.error` 로 이미 알렸는가 — 경계의 이중 토스트 방지 |
 | `createAuthClient` | factory | 쿠키 세션 인증(fetchMe/login/logout) — 제네릭 user/자격증명 |
 | `createPermissionStore` · `hasPermission` 외 | store | 권한 스냅샷 store + 판정 free 함수 |
-| `CurrencyHelper` | class | 통화 포맷(`formatKRW` 등) |
-| `DateHelper` | class | 날짜 포맷/파싱 |
+| `CurrencyHelper` | class | 통화 포맷(`formatKRW` 등) — **deprecated**, `@iyulab/components` 의 `formatCurrency` 를 쓸 것 |
+| `DateHelper` | class | 날짜 포맷·날짜 계산(로컬 달력 — `'YYYY-MM-DD'` 는 그 날로 읽는다) |
 | `ProgressHelper` | class | 진행률 계산 |
 | `UrgencyHelper` | class | 긴급도 계산 |
 
@@ -157,7 +166,7 @@ export const svc = createODataService({
 })
 ```
 
-- **성공한 쓰기마다 한 번** — `odata*`·`api*` 의 `Post`/`Put`/`Patch`/`Delete` 와 그 `*Quiet` 변형 전부.
+- **성공한 쓰기마다 한 번** — `odataPost`·`odataPatch`·`odataDelete`, `apiPost`·`apiPut`·`apiPatch`·`apiDelete` 와 그 `*Quiet` 변형 전부(`odataPut` 은 없다).
   토스트 여부와 무관하다.
 - **실패한 쓰기·읽기(`fetchRaw` 포함)에는 부르지 않는다.**
 - `mutation` = `{ method, source: 'odata' | 'api', target, id? }` — `target` 은 `odata` 면 엔티티 셋
@@ -199,7 +208,7 @@ export const svc = createODataService({
 await svc.apiPost('auth/login', creds, { onUnauthorized: false })
 ```
 
-- **모든 요청 메서드가 이 옵션을 받는다**(마지막 선택 인자). 부분집합으로 두면 다음 소비자가
+- **`fetchRaw` 를 뺀 모든 요청 메서드가 이 옵션을 받는다**(마지막 선택 인자 — `fetchRaw` 는 애초에 401 훅을 태우지 않는다). 부분집합으로 두면 다음 소비자가
   다른 메서드에서 같은 벽을 만난다.
 - **끄는 축만 있다.** 새 동작을 켜는 스위치가 아니라 전역 정책의 탈출구이므로, 옵션을 생략한
   호출은 이 옵션이 생기기 전과 **한 글자도 다르게 동작하지 않는다.**
@@ -311,7 +320,7 @@ if (hasPermission('orders.write')) { /* 저장 버튼 노출 */ }
 | `extractLoginError` | 로그인 실패(non-401) 응답 바디에서 서버 메시지 추출 오버라이드 (기본: `body.Message ?? body.message`) |
 | `permissionStore` | 권한 자동 갱신 대상 store (기본 `defaultPermissionStore`) — 격리가 필요하면 `createPermissionStore()`로 별도 store를 만들어 주입 |
 
-- `fetchMe()` 는 401/네트워크 오류 시 `null` — 이 신호가 로그인 게이트를 구동한다(라이브러리가 리다이렉트하지 않음).
+- `fetchMe()` 는 2xx 가 아닌 응답(401 포함)이나 네트워크 오류 시 `null` — 이 신호가 로그인 게이트를 구동한다(라이브러리가 리다이렉트하지 않음).
 - 도메인 판정(`isPortalUser` 등)·권한 코드 상수는 라이브러리가 아니라 앱 adapter 에 둔다.
 
 ### 도메인 헬퍼
@@ -319,7 +328,7 @@ if (hasPermission('orders.write')) { /* 저장 버튼 노출 */ }
 ```typescript
 import { CurrencyHelper, DateHelper } from '@iyulab/enterprise'
 
-CurrencyHelper.formatKRW(1234000)   // ₩1,234,000
+CurrencyHelper.formatKRW(1234000)   // ₩1,234,000 — deprecated: formatCurrency(1234000, 'KRW') from @iyulab/components
 ```
 
 ## Development

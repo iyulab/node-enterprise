@@ -2,7 +2,23 @@
 
 ## [0.20.2] - 2026-09-30
 
+### Fixed
+
+- **`DateHelper.formatDate` and `formatDateTime` write the local date and time.** They cut the UTC
+  string, so in time zones ahead of UTC the early hours of a day came out as the previous day and the
+  time was off by the offset (in Korea, 03:05 on the 29th was written as `2026-09-28 18:05`). A
+  date-only string such as `'2026-09-29'` is now read as that day in the local time zone everywhere in
+  `DateHelper`; it was read as UTC midnight, which is the previous day west of UTC.
+- `DateHelper.formatLocalDate` defaults to the app locale (`Locale.get()` from `@iyulab/components`)
+  instead of `'ko-KR'`.
+- **`ApiConfig` ignores a trailing `/` on `baseUrl` and slashes around the prefixes.** `baseUrl: '/'`
+  produced `//$data/Orders`, which a browser reads as a URL on another host.
+
 ### Documentation
+
+- README corrections: which writes call `onMutated` (there is no `odataPut`), `fetchRaw` takes no
+  per-call options, `fetchMe()` returns `null` for any non-2xx response, `CurrencyHelper` is deprecated,
+  the `@iyulab/components` peer and the `/icons` and `/styles/preset.css` entry points.
 
 - The package now ships an agent skill (`skills/iyulab-enterprise/`) — the OData service, auth and
   permissions, form layout and helpers in a form coding agents load directly.

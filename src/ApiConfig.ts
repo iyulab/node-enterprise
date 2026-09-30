@@ -5,7 +5,7 @@
  */
 
 export interface ApiConfigOptions {
-    /** Base URL for all API requests (default: '') */
+    /** Base URL for all API requests (default: ''). A trailing `/` is ignored — `'/'` is the same as `''`. */
     baseUrl?: string;
     /** OData endpoint prefix (default: '$data') */
     odataPrefix?: string;
@@ -14,6 +14,11 @@ export interface ApiConfigOptions {
     /** Force development mode detection */
     isDevelopment?: boolean;
 }
+
+/** `https://host/` · `/` → `https://host` · `''` — URL 은 `${baseUrl}/${prefix}/…` 로 붙으므로 끝 슬래시를 떼어 둔다. */
+const trimTrailingSlash = (url: string): string => url.replace(/\/+$/, '');
+/** `/api/` → `api` — 접두사는 양쪽 슬래시 없이 둔다. */
+const trimSlashes = (segment: string): string => segment.replace(/^\/+|\/+$/g, '');
 
 export class ApiConfig {
     private static _baseUrl: string = '';
@@ -27,13 +32,13 @@ export class ApiConfig {
      */
     static initialize(options: ApiConfigOptions = {}): void {
         if (options.baseUrl !== undefined) {
-            this._baseUrl = options.baseUrl;
+            this._baseUrl = trimTrailingSlash(options.baseUrl);
         }
         if (options.odataPrefix !== undefined) {
-            this._odataPrefix = options.odataPrefix;
+            this._odataPrefix = trimSlashes(options.odataPrefix);
         }
         if (options.apiPrefix !== undefined) {
-            this._apiPrefix = options.apiPrefix;
+            this._apiPrefix = trimSlashes(options.apiPrefix);
         }
         if (options.isDevelopment !== undefined) {
             this._isDevelopment = options.isDevelopment;
@@ -51,7 +56,7 @@ export class ApiConfig {
      * Manually set Base URL (for testing or custom configurations)
      */
     static setBaseUrl(url: string): void {
-        this._baseUrl = url;
+        this._baseUrl = trimTrailingSlash(url);
     }
 
     /**
