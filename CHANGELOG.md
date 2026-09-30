@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.2] - 2026-09-30
+
+### Documentation
+
+- The package now ships an agent skill (`skills/iyulab-enterprise/`) — the OData service, auth and
+  permissions, form layout and helpers in a form coding agents load directly.
+
 ## [0.20.1] - 2026-09-28
 
 ### Fixed
