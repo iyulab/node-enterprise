@@ -56,7 +56,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@iyulab/http-client": "^0.12.0",
+    "@iyulab/http-client": "^0.13.0",
     "odata-query": "^8.1.0"
   },
   "devDependencies": {

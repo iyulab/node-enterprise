@@ -4,6 +4,9 @@
 
 ### Changed
 
+- `@iyulab/http-client` `^0.13.0` (was `^0.12.0`). That release removes the deprecated
+  `onRequest`/`onResponse`/`onError` options; this package never used them and does not expose its
+  client, so nothing changes for you.
 - The optional `react` peer is `^18.0.0 || ^19.0.0` (was `>=18`) — only the majors that are tested.
 
 ## [0.20.4] - 2026-09-30
