@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.20.4] - 2026-09-30
+
+### Changed
+
+- Depends on `@iyulab/http-client` `^0.12.0` (was `^0.11.0`). Reading a response whose connection
+  closes mid-body now fails with `IncompleteResponseError`, which extends `TypeError`, so existing
+  error handling keeps working.
+
 ## [0.20.3] - 2026-09-30
 
 ### Changed
