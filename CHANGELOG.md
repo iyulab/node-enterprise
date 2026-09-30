@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.20.3] - 2026-09-30
+
+### Changed
+
+- Depends on `@iyulab/http-client` `^0.11.0` (was `^0.10.3`), so an app that installs this package gets
+  the http-client that applies `timeout` to the response body as well as the headers and adds
+  `idleTimeout` for streams. The OData and API calls here pass no timeout of their own, so nothing
+  changes unless your app configures one.
+
 ## [0.20.2] - 2026-09-30
 
 ### Fixed

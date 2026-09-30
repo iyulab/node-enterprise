@@ -1,6 +1,6 @@
 {
   "name": "@iyulab/enterprise",
-  "version": "0.20.2",
+  "version": "0.20.3",
   "description": "Enterprise utilities and components for iyulab framework",
   "keywords": [
     "enterprise",
@@ -56,7 +56,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@iyulab/http-client": "^0.10.3",
+    "@iyulab/http-client": "^0.11.0",
     "odata-query": "^8.1.0"
   },
   "devDependencies": {
