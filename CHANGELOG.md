@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- The optional `react` peer is `^18.0.0 || ^19.0.0` (was `>=18`) — only the majors that are tested.
+
 ## [0.20.4] - 2026-09-30
 
 ### Changed
