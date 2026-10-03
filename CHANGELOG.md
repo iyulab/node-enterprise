@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Documentation
+
+- LOB layer charter §3-1: a pattern is promoted by whether it belongs in this layer, whether its
+  skeleton has converged, and whether a design meets the override contract — no longer by counting
+  independent consumers. A single request is read as a sample of every consumer that will hit the same
+  root cause; waiting is for an unsettled design, not for more requests.
+
 ## [0.20.5] - 2026-09-30
 
 ### Changed
