@@ -4,7 +4,6 @@ description: Opinionated line-of-business (LOB) toolkit for web apps built on @i
 license: MIT
 metadata:
   author: iyulab
-  version: "0.20.2"
 ---
 
 # @iyulab/enterprise
