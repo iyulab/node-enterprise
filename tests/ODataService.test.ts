@@ -282,6 +282,15 @@ describe('createODataService — errors', () => {
     expect(error).not.toHaveBeenCalled()
   })
 
+  it('sourceDefaults.onUnauthorized 는 401 만 세션 만료로 통지한다 — 403 은 권한 거절이다', () => {
+    const onUnauthorized = vi.fn()
+    const svc = createODataService({ baseUrl: BASE, onUnauthorized })
+    svc.sourceDefaults.onUnauthorized(new Response(null, { status: 403 }))
+    expect(onUnauthorized).not.toHaveBeenCalled()
+    svc.sourceDefaults.onUnauthorized(new Response(null, { status: 401 }))
+    expect(onUnauthorized).toHaveBeenCalledWith(401)
+  })
+
   // odataPatch/odataDelete는 이전에 throwIfError를 쓰지 않고 401/에러 처리를 각자
   // 인라인으로 중복 구현하고 있었다 — quiet 짝을 추가하며 throwIfError 재사용으로
   // 리팩터 했으므로, 그 리팩터가 기존 동작(에러 토스트·401 처리)을 그대로

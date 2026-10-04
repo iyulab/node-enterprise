@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **`sourceDefaults.onUnauthorized` no longer reports a `403` as a session expiry.** It ignored the
+  response it was given and always called `config.onUnauthorized(401)`, and a table data source
+  that also calls the hook on `403` (`useODataSource` before `@iyulab/flex-table` 0.43.0) sent a
+  signed-in user without permission to the sign-in page — and back to the same list after signing
+  in. It now takes the response and forwards only a `401`, as every other path of the service
+  does. The type changes from `() => void` to `(response: Response) => void`.
+
 ## [0.21.0] - 2026-10-04
 
 ### Added

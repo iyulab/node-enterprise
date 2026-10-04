@@ -329,8 +329,12 @@ export interface ODataService {
   /**
    * flex-table `useODataSource` 에 주입할 공용 transport 옵션.
    * useODataSource 는 자체 fetcher 를 쓰므로 별도로 `onUnauthorized` 를 배선해야 401 처리가 걸린다.
+   *
+   * `onUnauthorized` 는 받은 응답이 **401 일 때만** `config.onUnauthorized(401)` 로 잇는다 — 서비스의
+   * 다른 경로(`throwIfError`)와 같은 의미다. 403(인증됐지만 권한 없음)은 세션 만료가 아니므로
+   * 통지하지 않고, 표가 자기 에러로 드러낸다.
    */
-  readonly sourceDefaults: { baseUrl: string; onUnauthorized: () => void }
+  readonly sourceDefaults: { baseUrl: string; onUnauthorized: (response: Response) => void }
 
   /** `instanceof` 판정을 위해 재노출. (모듈 export `ApiError` 와 동일 클래스) */
   readonly ApiError: typeof ApiError
@@ -726,7 +730,9 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     fetchRaw,
     sourceDefaults: {
       baseUrl,
-      onUnauthorized: () => config.onUnauthorized?.(401),
+      onUnauthorized: (response: Response) => {
+        if (response.status === 401) config.onUnauthorized?.(401)
+      },
     },
     ApiError,
   }

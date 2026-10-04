@@ -43,7 +43,7 @@ from `error.message`, then top-level `message`, then `Message`.
 |---|---|
 | `odataUrl(entity)` | `${baseUrl}/${odataPrefix}/${entity}` |
 | `apiUrl(path)` | `${baseUrl}/${apiPrefix}/${path}` (leading `/` stripped) |
-| `sourceDefaults` | `{ baseUrl, onUnauthorized }` for table data sources with their own fetcher (e.g. `useODataSource` from `@iyulab/flex-table/react`) so they get the same 401 handling |
+| `sourceDefaults` | `{ baseUrl, onUnauthorized }` for table data sources with their own fetcher (e.g. `useODataSource` from `@iyulab/flex-table/react`) so they get the same 401 handling. `onUnauthorized(response)` forwards only a 401 — a 403 is not a session expiry and stays the table's own error |
 | `ApiError` | The `ApiError` class, for `instanceof` without an extra import |
 
 ## Reads
