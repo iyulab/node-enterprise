@@ -15,7 +15,7 @@
  * })
  * const rows = await svc.odataGet<BankAccount>('BankAccounts', { $top: '20' })
  */
-import { HttpClient, type HttpResponse } from '@iyulab/http-client'
+import { HttpClient, type HttpResponse, type RequestOptions } from '@iyulab/http-client'
 import buildQuery from 'odata-query'
 
 /**
@@ -117,18 +117,44 @@ const DEFAULT_MESSAGES: ODataServiceMessages = {
     403: 'Forbidden',
     404: 'Not found',
     409: 'Conflict',
+    412: 'Someone else changed this record. Reload it and try again.',
     500: 'Server error',
   },
 }
 
 /**
- * 한 호출에만 적용되는 요청 옵션 — 서비스 전역 정책(`ODataServiceConfig`)의 호출 단위 예외.
+ * 엔티티의 ETag(`@odata.etag`) — 조건부 쓰기(`ODataRequestOptions.ifMatch`)에 그대로 넘긴다.
+ * 동시성 토큰을 선언한 엔티티만 갖는다. 없으면 `undefined`.
  *
- * 🔴**전역 정책을 «끄는» 축만 둔다.** 새 동작을 켜는 스위치가 아니라, config 가 세운 기본
- * 정책이 *그 호출에서만* 틀린 경우를 위한 탈출구다 — 그래서 기본값은 항상 «config 그대로» 이고,
- * 옵션을 생략한 호출은 이 타입이 생기기 전과 **한 글자도 다르게 동작하지 않는다.**
+ * ⚠값은 불투명하다 — 행 버전 필드(`RowVersion` 등)를 읽거나 비교하지 말고 이 값을 돌려보낸다.
+ */
+export function etagOf(entity: unknown): string | undefined {
+  if (typeof entity !== 'object' || entity === null) return undefined
+  const v = (entity as Record<string, unknown>)['@odata.etag']
+  return typeof v === 'string' && v ? v : undefined
+}
+
+/**
+ * 한 호출에만 적용되는 요청 옵션 — 서비스 전역 정책(`ODataServiceConfig`)의 호출 단위 예외와,
+ * 그 호출 하나에만 뜻이 있는 HTTP 표준 축(취소 신호 · 조건부 쓰기).
+ *
+ * 🔴**옵션을 생략한 호출은 이 타입이 생기기 전과 한 글자도 다르게 동작하지 않는다.** 기본값은
+ * 항상 «config 그대로» 이고, 요청에 아무것도 더하지 않는다.
  */
 export interface ODataRequestOptions {
+  /**
+   * 이 호출을 취소할 표준 신호(`fetch` 의 `signal` 과 같다). 취소되면 **`signal.reason` 을 그대로**
+   * 던진다(기본은 `AbortError` 인 `DOMException`) — `ApiError` 가 아니고, `notify.error` 도
+   * `onMutated` 도 부르지 않는다: 사용자가 버린 요청은 실패가 아니다.
+   * 새 입력이 앞선 요청을 버리는 화면(연속 클릭 · 입력 중 조회)이 쓰는 자리다.
+   */
+  signal?: AbortSignal
+  /**
+   * 조건부 쓰기 — `If-Match` 헤더로 보낼 ETag. 읽을 때 받은 값(`etagOf(entity)`)을 그대로 넘긴다.
+   * 그 사이 다른 사람이 레코드를 바꿨으면 서버가 412 로 거절하고, 서비스는
+   * `ApiError(…, 412)` 를 던진다(`messages.http[412]`). 값을 계산하거나 비교하지 말 것 — 불투명하다.
+   */
+  ifMatch?: string
   /**
    * `false` → 이 호출의 401 을 «세션 만료» 로 취급하지 않는다: 전역 `onUnauthorized` 를
    * 부르지 않고, `messages.sessionExpired` 로 덮어쓰지도 않으며, **서버가 준 메시지**로
@@ -360,6 +386,31 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   // baseUrl 은 우리가 URL 조립 시 직접 붙이므로 client 에는 넘기지 않는다(이중 prefix 방지).
   const client = new HttpClient({})
 
+  /** 호출 옵션 → 전송 옵션. 더할 것이 없으면 `undefined` — 옵션을 생략한 호출의 요청은 종전과 같다. */
+  function transport(opts?: ODataRequestOptions): RequestOptions | undefined {
+    if (!opts?.signal && !opts?.ifMatch) return undefined
+    const t: RequestOptions = {}
+    if (opts.signal) t.signal = opts.signal
+    if (opts.ifMatch) t.headers = { 'If-Match': opts.ifMatch }
+    return t
+  }
+
+  /**
+   * 취소된 호출은 **`signal.reason` 을 그대로** 던진다 — 전송 계층의 `CanceledError` 나 본문 읽기
+   * 실패로 바꾸지 않는다(`fetch` 에 `signal` 을 준 것과 같은 결과). 이미 취소된 신호면 보내지 않는다.
+   */
+  async function cancellable<T>(opts: ODataRequestOptions | undefined, run: () => Promise<T>): Promise<T> {
+    const signal = opts?.signal
+    if (!signal) return run()
+    signal.throwIfAborted()
+    try {
+      return await run()
+    } catch (e) {
+      if (signal.aborted) throw signal.reason
+      throw e
+    }
+  }
+
   const odataUrl = (entity: string) => `${baseUrl}/${odataPrefix}/${entity}`
   const apiUrl = (path: string) => {
     const clean = path.startsWith('/') ? path.slice(1) : path
@@ -428,8 +479,12 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     return next.toString()
   }
 
-  async function getPage<T>(url: string, opts?: ODataRequestOptions): Promise<ODataPage<T>> {
-    const res = await client.get(url)
+  function getPage<T>(url: string, opts?: ODataRequestOptions): Promise<ODataPage<T>> {
+    return cancellable(opts, () => readPage<T>(url, opts))
+  }
+
+  async function readPage<T>(url: string, opts?: ODataRequestOptions): Promise<ODataPage<T>> {
+    const res = await client.get(url, transport(opts))
     await throwIfError(res, opts)
     const json = await res.json<{ value?: T[]; '@odata.nextLink'?: string; '@odata.count'?: number }>()
     const page: ODataPage<T> = { value: json.value ?? (json as unknown as T[]) }
@@ -474,17 +529,27 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   }
 
   async function odataGetById<T>(entity: string, id: string, opts?: ODataRequestOptions): Promise<T> {
-    const res = await client.get(`${odataUrl(entity)}(${id})`)
-    await throwIfError(res, opts)
-    return res.json<T>()
+    return cancellable(opts, async () => {
+      const res = await client.get(`${odataUrl(entity)}(${id})`, transport(opts))
+      await throwIfError(res, opts)
+      const entityJson = await res.json<T>()
+      // 단건 응답은 ETag 를 헤더로도 준다 — 본문에 `@odata.etag` 가 없으면 헤더 값을 실어 `etagOf` 한 길로 읽게 한다.
+      const header = res.headers.get('ETag')
+      if (header && typeof entityJson === 'object' && entityJson !== null && !etagOf(entityJson)) {
+        (entityJson as Record<string, unknown>)['@odata.etag'] = header
+      }
+      return entityJson
+    })
   }
 
   async function odataCount(entity: string, filter?: Record<string, unknown>, opts?: ODataRequestOptions): Promise<number> {
-    const qs = buildQuery({ filter, top: 0, count: true })
-    const res = await client.get(`${odataUrl(entity)}${qs}`)
-    await throwIfError(res, opts)
-    const json = await res.json<{ '@odata.count'?: number }>()
-    return json['@odata.count'] ?? 0
+    return cancellable(opts, async () => {
+      const qs = buildQuery({ filter, top: 0, count: true })
+      const res = await client.get(`${odataUrl(entity)}${qs}`, transport(opts))
+      await throwIfError(res, opts)
+      const json = await res.json<{ '@odata.count'?: number }>()
+      return json['@odata.count'] ?? 0
+    })
   }
 
   /**
@@ -502,10 +567,12 @@ export function createODataService(config: ODataServiceConfig): ODataService {
    * 태우는 경로라 «저장되었습니다» 같은 문구를 우리가 지어낼 수 없다 — 실패 메시지는 서버가
    * 주므로 어느 엔드포인트에서나 뜻이 통하지만, 성공 문구는 그렇지 않다.
    */
-  async function notifyingWrite<T>(run: () => Promise<T>): Promise<T> {
+  async function notifyingWrite<T>(run: () => Promise<T>, opts?: ODataRequestOptions): Promise<T> {
     try {
       return await run()
     } catch (e) {
+      // 사용자가 버린 요청(취소)은 실패가 아니다 — 알리지 않는다.
+      if (opts?.signal?.aborted) throw e
       if (notifyError && !(e instanceof ApiError && e.status === 401)) {
         notifyError(e instanceof Error ? e.message : messages.requestFailed)
         if (typeof e === 'object' && e !== null) notifiedFailures.add(e)
@@ -515,11 +582,13 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   }
 
   async function odataPostQuiet<T>(entity: string, body: Partial<T>, opts?: ODataRequestOptions): Promise<T> {
-    const res = await client.post(odataUrl(entity), normalizeBody(body))
-    await throwIfError(res, opts)
-    const result = await res.json<T>()
-    mutated({ method: 'POST', source: 'odata', target: entity })
-    return result
+    return cancellable(opts, async () => {
+      const res = await client.post(odataUrl(entity), normalizeBody(body), transport(opts))
+      await throwIfError(res, opts)
+      const result = await res.json<T>()
+      mutated({ method: 'POST', source: 'odata', target: entity })
+      return result
+    })
   }
 
   async function odataPost<T>(entity: string, body: Partial<T>, opts?: ODataRequestOptions): Promise<T> {
@@ -527,90 +596,104 @@ export function createODataService(config: ODataServiceConfig): ODataService {
       const result = await odataPostQuiet<T>(entity, body, opts)
       notifySuccess?.(messages.saved)
       return result
-    })
+    }, opts)
   }
 
   async function odataPatchQuiet<T>(entity: string, id: string, body: Partial<T>, opts?: ODataRequestOptions): Promise<void> {
-    const res = await client.patch(`${odataUrl(entity)}(${id})`, normalizeBody(body))
-    await throwIfError(res, opts)
-    mutated({ method: 'PATCH', source: 'odata', target: entity, id })
+    return cancellable(opts, async () => {
+      const res = await client.patch(`${odataUrl(entity)}(${id})`, normalizeBody(body), transport(opts))
+      await throwIfError(res, opts)
+      mutated({ method: 'PATCH', source: 'odata', target: entity, id })
+    })
   }
 
   async function odataPatch<T>(entity: string, id: string, body: Partial<T>, opts?: ODataRequestOptions): Promise<void> {
     return notifyingWrite(async () => {
       await odataPatchQuiet<T>(entity, id, body, opts)
       notifySuccess?.(messages.updated)
-    })
+    }, opts)
   }
 
   async function odataDeleteQuiet(entity: string, id: string, opts?: ODataRequestOptions): Promise<void> {
-    const res = await client.delete(`${odataUrl(entity)}(${id})`)
-    await throwIfError(res, opts)
-    mutated({ method: 'DELETE', source: 'odata', target: entity, id })
+    return cancellable(opts, async () => {
+      const res = await client.delete(`${odataUrl(entity)}(${id})`, transport(opts))
+      await throwIfError(res, opts)
+      mutated({ method: 'DELETE', source: 'odata', target: entity, id })
+    })
   }
 
   async function odataDelete(entity: string, id: string, opts?: ODataRequestOptions): Promise<void> {
     return notifyingWrite(async () => {
       await odataDeleteQuiet(entity, id, opts)
       notifySuccess?.(messages.deleted)
-    })
+    }, opts)
   }
 
   async function apiGet<T>(path: string, opts?: ODataRequestOptions): Promise<T> {
     // 쿼리스트링이 붙은 path 지원(`endpoint?x=1`).
     const [p, ...q] = path.split('?')
     const url = q.length ? `${apiUrl(p)}?${q.join('?')}` : apiUrl(p)
-    const res = await client.get(url)
-    await throwIfError(res, opts)
-    return parseJsonBody<T>(res)
+    return cancellable(opts, async () => {
+      const res = await client.get(url, transport(opts))
+      await throwIfError(res, opts)
+      return parseJsonBody<T>(res)
+    })
   }
 
   async function apiPostQuiet<T>(path: string, body?: unknown, opts?: ODataRequestOptions): Promise<T> {
-    const res = await client.post(apiUrl(path), body ?? {})
-    await throwIfError(res, opts)
-    const result = await parseJsonBody<T>(res)
-    mutated({ method: 'POST', source: 'api', target: path })
-    return result
+    return cancellable(opts, async () => {
+      const res = await client.post(apiUrl(path), body ?? {}, transport(opts))
+      await throwIfError(res, opts)
+      const result = await parseJsonBody<T>(res)
+      mutated({ method: 'POST', source: 'api', target: path })
+      return result
+    })
   }
 
   async function apiPost<T>(path: string, body?: unknown, opts?: ODataRequestOptions): Promise<T> {
-    return notifyingWrite(() => apiPostQuiet<T>(path, body, opts))
+    return notifyingWrite(() => apiPostQuiet<T>(path, body, opts), opts)
   }
 
   async function apiPutQuiet<T>(path: string, body?: unknown, opts?: ODataRequestOptions): Promise<T> {
-    const res = await client.put(apiUrl(path), body ?? {})
-    await throwIfError(res, opts)
-    const result = await parseJsonBody<T>(res)
-    mutated({ method: 'PUT', source: 'api', target: path })
-    return result
+    return cancellable(opts, async () => {
+      const res = await client.put(apiUrl(path), body ?? {}, transport(opts))
+      await throwIfError(res, opts)
+      const result = await parseJsonBody<T>(res)
+      mutated({ method: 'PUT', source: 'api', target: path })
+      return result
+    })
   }
 
   async function apiPut<T>(path: string, body?: unknown, opts?: ODataRequestOptions): Promise<T> {
-    return notifyingWrite(() => apiPutQuiet<T>(path, body, opts))
+    return notifyingWrite(() => apiPutQuiet<T>(path, body, opts), opts)
   }
 
   async function apiPatchQuiet<T>(path: string, body?: unknown, opts?: ODataRequestOptions): Promise<T> {
-    const res = await client.patch(apiUrl(path), body ?? {})
-    await throwIfError(res, opts)
-    const result = await parseJsonBody<T>(res)
-    mutated({ method: 'PATCH', source: 'api', target: path })
-    return result
+    return cancellable(opts, async () => {
+      const res = await client.patch(apiUrl(path), body ?? {}, transport(opts))
+      await throwIfError(res, opts)
+      const result = await parseJsonBody<T>(res)
+      mutated({ method: 'PATCH', source: 'api', target: path })
+      return result
+    })
   }
 
   async function apiPatch<T>(path: string, body?: unknown, opts?: ODataRequestOptions): Promise<T> {
-    return notifyingWrite(() => apiPatchQuiet<T>(path, body, opts))
+    return notifyingWrite(() => apiPatchQuiet<T>(path, body, opts), opts)
   }
 
   async function apiDeleteQuiet<T = void>(path: string, opts?: ODataRequestOptions): Promise<T> {
-    const res = await client.delete(apiUrl(path))
-    await throwIfError(res, opts)
-    const result = await parseJsonBody<T>(res)
-    mutated({ method: 'DELETE', source: 'api', target: path })
-    return result
+    return cancellable(opts, async () => {
+      const res = await client.delete(apiUrl(path), transport(opts))
+      await throwIfError(res, opts)
+      const result = await parseJsonBody<T>(res)
+      mutated({ method: 'DELETE', source: 'api', target: path })
+      return result
+    })
   }
 
   async function apiDelete<T = void>(path: string, opts?: ODataRequestOptions): Promise<T> {
-    return notifyingWrite(() => apiDeleteQuiet<T>(path, opts))
+    return notifyingWrite(() => apiDeleteQuiet<T>(path, opts), opts)
   }
 
   async function fetchRaw(url: string): Promise<HttpResponse> {

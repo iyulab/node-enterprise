@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Cancelling a call: `ODataRequestOptions.signal`** — a standard `AbortSignal` on every read and
+  write. A cancelled call rejects with `signal.reason` itself (an `AbortError`), not `ApiError`, and
+  neither `notify.error` nor `onMutated` runs. A screen that drops the previous request on the next
+  click no longer has to fall back to raw `fetch`.
+- **Optimistic concurrency: `ODataRequestOptions.ifMatch` and `etagOf(entity)`** — send the entity's
+  `@odata.etag` back as `If-Match`; a concurrent change makes the server answer 412, thrown as
+  `ApiError(…, 412)` with the new default message `messages.http[412]`. `odataGetById` fills
+  `@odata.etag` from the `ETag` header when the body has none.
+
+### Changed
+
+- Requires `@iyulab/http-client` 0.14 (per-request headers and `AbortSignal`).
+
 ### Documentation
 
 - LOB layer charter §3-1: a pattern is promoted by whether it belongs in this layer, whether its

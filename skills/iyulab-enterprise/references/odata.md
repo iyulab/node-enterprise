@@ -135,7 +135,7 @@ Default (global policy): on 401 the service calls `onUnauthorized(401)` and thro
 `ApiError(messages.sessionExpired, 401)`.
 
 Per-call escape hatch — every read/write method takes a last `opts` argument
-(`ODataRequestOptions`) with a single field `onUnauthorized?: false`:
+(`ODataRequestOptions`; its other fields are below) with `onUnauthorized?: false`:
 
 ```ts
 // Login: 401 means "wrong credentials", not "session expired".
@@ -149,6 +149,49 @@ try {
 With `false`, the hook is not called and the message is not replaced — the 401 is treated
 like any other status. Omitting `opts` keeps the global behaviour. There is no
 `authenticate()` helper by design: endpoint paths and body shapes belong to the app.
+
+## Cancelling a call (`signal`)
+
+`opts.signal` is a standard `AbortSignal`. A cancelled call rejects with **`signal.reason` itself**
+(an `AbortError` `DOMException` by default) — not `ApiError` — and neither `notify.error` nor
+`onMutated` runs: a request the user dropped is not a failure. An already-aborted signal sends
+nothing.
+
+```ts
+let current: AbortController | undefined
+async function pick(x: number, y: number) {
+  current?.abort()                 // drop the previous click's request
+  current = new AbortController()
+  try {
+    return await svc.apiGet(`hit?x=${x}&y=${y}`, { signal: current.signal })
+  } catch (e) {
+    if (current.signal.aborted) return undefined   // superseded — ignore
+    throw e
+  }
+}
+```
+
+## Optimistic concurrency (`ifMatch` · `etagOf`)
+
+A server that declares a concurrency token returns `@odata.etag` on every entity (and an `ETag`
+header on a single-entity GET) and honours `If-Match`. Read the tag with `etagOf(entity)` and send
+it back with the write; if someone changed the record in between, the server answers 412 and the
+service throws `ApiError(messages.http[412], 412)` (notified like any write failure).
+
+```ts
+import { etagOf, ApiError } from '@iyulab/enterprise'
+
+const order = await svc.odataGetById<Order>('Orders', id)
+try {
+  await svc.odataPatch('Orders', id, changes, { ifMatch: etagOf(order) })
+} catch (e) {
+  if (e instanceof ApiError && e.status === 412) reloadAndShowConflict()
+}
+```
+
+The tag is opaque — do not read, compare or compute the row-version field; pass the tag back.
+`odataGetById` copies the `ETag` header into `@odata.etag` when the body has none, so `etagOf`
+is the one way to read it. Without `ifMatch` a write is unconditional, as before.
 
 ## `fetchRaw(url)`
 
