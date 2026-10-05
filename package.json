@@ -30,9 +30,7 @@
     "./src/index.ts",
     "./dist/index.js",
     "./src/icons.ts",
-    "./dist/icons.js",
-    "./src/styles/preset.css",
-    "./dist/styles/preset.css"
+    "./dist/icons.js"
   ],
   "exports": {
     ".": {
@@ -46,12 +44,11 @@
     "./react": {
       "types": "./src/react.d.ts",
       "import": "./src/react.js"
-    },
-    "./styles/preset.css": "./src/styles/preset.css"
+    }
   },
   "scripts": {
     "preversion": "node -e \"if(require('fs').existsSync('../../scripts/preversion-check.mjs'))require('child_process').execFileSync('node',['../../scripts/preversion-check.mjs'],{stdio:'inherit'})\"",
-    "build": "npm run typecheck && vite build && node scripts/copy-styles.mjs",
+    "build": "npm run typecheck && vite build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

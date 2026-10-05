@@ -15,7 +15,6 @@ npm install @iyulab/enterprise @iyulab/components
 | `@iyulab/enterprise` | 아래 표의 고유 export |
 | `@iyulab/enterprise/react` | `FormSection` · `FormRow` |
 | `@iyulab/enterprise/icons` | `house` 아이콘 라이브러리 등록(부수효과 import) |
-| `@iyulab/enterprise/styles/preset.css` | LOB 프리셋 시트 — 층 순서는 [docs/lob-layers.md](./docs/lob-layers.md) |
 
 ## 무엇을 제공하나
 
