@@ -1,6 +1,6 @@
 ---
 name: iyulab-enterprise
-description: Opinionated line-of-business (LOB) toolkit for web apps built on @iyulab/components — an OData v4 + REST data service factory with 401, toast and error handling, a cookie-session auth client with a permission store, React form layout blocks, an API URL config, formatting/urgency/progress helpers, a house-style CSS token preset and an opt-in icon set. Use when working with @iyulab/enterprise — wiring createODataService or createAuthClient, handling ApiError, checking permissions, laying out forms with FormSection/FormRow, or loading the preset/icons.
+description: Opinionated line-of-business (LOB) toolkit for web apps built on @iyulab/components — an OData v4 + REST data service factory with 401, toast and error handling, a cookie-session auth client with a permission store, React form layout blocks, an API URL config, formatting/urgency/progress helpers and an opt-in icon set. Use when working with @iyulab/enterprise — wiring createODataService or createAuthClient, handling ApiError, checking permissions, laying out forms with FormSection/FormRow, or loading the preset/icons.
 license: MIT
 metadata:
   author: iyulab
@@ -31,7 +31,6 @@ npm install react
 | `@iyulab/enterprise` | `createODataService`, `ApiError`, `wasNotified`, `createAuthClient`, permission store, `ApiConfig`, helpers | Registers the helper locale strings |
 | `@iyulab/enterprise/react` | `FormSection`, `FormRow` | none |
 | `@iyulab/enterprise/icons` | Registers the `'house'` icon library | opt-in: import once |
-| `@iyulab/enterprise/styles/preset.css` | House-style `--u-*` token values | opt-in: import once |
 
 The root entry does **not** re-export `@iyulab/components`, `@iyulab/data-components` or
 `@iyulab/modern-app` — import those packages directly.
@@ -115,8 +114,8 @@ Details: [references/forms-and-helpers.md](./references/forms-and-helpers.md).
 3. Keep entity names, permission codes and domain actions in the app — never ask this
    library to know them.
 4. At a global error boundary, toast only failures where `wasNotified(err)` is `false`.
-5. Load `styles/preset.css` **after** `@iyulab/components` is initialized, before your
-   own brand overrides.
+5. House values (type scale, radii, elevation) come from `@iyulab/house-style`, not from
+   this package — `import '@iyulab/house-style'`.
 
 ## References
 
@@ -125,4 +124,4 @@ Details: [references/forms-and-helpers.md](./references/forms-and-helpers.md).
   OData v4 conformance.
 - [references/auth.md](./references/auth.md) — `createAuthClient`, permission store.
 - [references/forms-and-helpers.md](./references/forms-and-helpers.md) — React form
-  layout, `ApiConfig`, domain helpers, `./icons`, `./styles/preset.css`.
+  layout, `ApiConfig`, domain helpers, `./icons`, where the house values live.

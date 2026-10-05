@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.23.0] - 2026-10-05
+
+### Removed (breaking)
+
+- **`styles/preset.css` moved to `@iyulab/house-style`.** The house values (type scale, radius,
+  elevation) now live in the house theme package together with the neutral ramp, status colours,
+  component recipes and layout patterns, in the `iyu.house` cascade layer.
+  **Migration:** replace `import '@iyulab/enterprise/styles/preset.css'` with
+  `import '@iyulab/house-style'` (needs `@iyulab/components` 2.0). The `./styles/preset.css` export
+  and the build's style-copy step are gone.
+
+### Added
+
+- `palette` in the `house` icon set (`@iyulab/enterprise/icons`).
+
 ## [0.22.0] - 2026-10-04
 
 ### Fixed
@@ -27,15 +42,6 @@
 ### Changed
 
 - Requires `@iyulab/http-client` 0.14 (per-request headers and `AbortSignal`).
-
-### Removed (breaking)
-
-- **`styles/preset.css` moved to `@iyulab/house-style`.** The house values (type scale, radius,
-  elevation) now live in the house theme package together with the neutral ramp, status colours,
-  component recipes and layout patterns, in the `iyu.house` cascade layer.
-  **Migration:** replace `import '@iyulab/enterprise/styles/preset.css'` with
-  `import '@iyulab/house-style'` (needs `@iyulab/components` 2.0). The `./styles/preset.css` export
-  and the build's style-copy step are gone.
 
 ### Documentation
 

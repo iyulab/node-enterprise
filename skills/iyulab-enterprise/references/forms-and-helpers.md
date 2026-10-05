@@ -1,4 +1,4 @@
-# Forms, API config, helpers, icons and preset
+# Forms, API config, helpers and icons
 
 ## Form layout — `@iyulab/enterprise/react`
 
@@ -162,10 +162,10 @@ Keys (`EnterpriseMessageKey`): `progressNotStarted`, `progressEarly`, `progressI
 
 ## Icons — `@iyulab/enterprise/icons`
 
-Opt-in side-effect import. Registers ten navigation-style SVG icons as the icon library
+Opt-in side-effect import. Registers eleven navigation-style SVG icons as the icon library
 `'house'` in the `@iyulab/components` icon registry:
 
-`code`, `contrast`, `flow`, `home`, `identity`, `layers`, `layout`, `message`, `pulse`, `table`.
+`code`, `contrast`, `flow`, `home`, `identity`, `layers`, `layout`, `message`, `palette`, `pulse`, `table`.
 
 ```ts
 import '@iyulab/enterprise/icons'
@@ -177,31 +177,14 @@ import '@iyulab/enterprise/icons'
 
 The main entry does not register them; import the subpath once at app start.
 
-## House-style preset — `@iyulab/enterprise/styles/preset.css`
+## House values — `@iyulab/house-style`
 
-An optional stylesheet that only sets values for `--u-*` tokens owned by
-`@iyulab/components` on `:root` (plus dark shadows on `:root[theme='dark']`). It adds no
-classes or selectors.
-
-It sets: type scale (`--u-text-{display,title,subtitle,body,label,caption,overline}-{size,weight,leading,tracking}`,
-denser than the neutral defaults), control radii (`--u-radius-sm` … `--u-radius-xl`), and
-elevation (`--u-shadow-color-*`, `--u-shadow-sm` … `--u-shadow-xl`). It does not set brand
-colors or the neutral ramp.
+The house type scale, radii and elevation used to ship here as `styles/preset.css`. They now
+live in the house theme package with the rest of the house values, in the `iyu.house` cascade
+layer above `@iyulab/components`' defaults (`iyu.base`):
 
 ```ts
-import '@iyulab/enterprise/styles/preset.css'
+import '@iyulab/house-style'   // requires @iyulab/components 2.0
 ```
 
-Layering is by load order (all three layers use `:root`, so the last one wins):
-
-```
-@iyulab/components defaults  →  enterprise preset  →  your brand overrides
-```
-
-- Requires `@iyulab/components` 1.44.0+, whose theme stylesheet is inserted before the first
-  stylesheet so the preset wins. With older versions the defaults silently win.
-- Load your own brand overrides after the preset.
-- The overline tier has positive tracking for Latin labels; set
-  `--u-text-overline-tracking: 0` if you use it for CJK text.
-- If the preset seems to have no effect, check the `@iyulab/components` version first,
-  then stylesheet order.
+Unlayered application CSS always wins over both layers, so brand overrides need no load order.
