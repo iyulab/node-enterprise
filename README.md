@@ -150,7 +150,7 @@ await svc.apiPost<Order>('orders/7/attachments', form)
 | `notify.success/error` | 토스트 훅 (생략 시 토스트 없음 — 순수). **메서드마다 걸리는 방식이 다르다 — 바로 아래 표 참조** |
 | `onMutated(mutation)` | 쓰기가 성공(2xx)한 뒤 한 번 — 캐시 무효화 자리. 아래 절 참조 (`0.19.0~`) |
 | `messages` | 사용자 대면 문구 (기본 영어, 지정 키만 대체) |
-| `formatError(info)` | 에러 메시지 포매팅 오버라이드 (앱별 정책) — `info` 는 `status`/`statusText`/`rawMessage`/`details`(검증된 `error.details`)/`body` 를 받는다 |
+| `formatError(info)` | 에러 메시지 포매팅 오버라이드 (앱별 정책) — `info` 는 `status`/`statusText`/`rawMessage`/`code`(서버의 거절 코드)/`details`(검증된 `error.details`)/`body` 를 받는다 |
 
 #### `onMutated` — 쓰기 뒤 무효화
 
@@ -247,6 +247,7 @@ try {
 |------|------|
 | `message` | 사용자 대면 메시지 (`formatError` → 서버 raw → status 폴백 순으로 결정) |
 | `status` | HTTP status |
+| `code` | 서버가 정한 거절 코드 — OData `error.code`(봉투가 없으면 최상위 `code`). 같은 상태 안의 실패를 가른다(예: 403 중 «비밀번호 변경 필요»). 없거나 빈 문자열이면 `undefined` |
 | `details` | `error.details` 항목 배열 — 규격상 `code`/`message` 는 필수, `target`(속성 이름)은 선택. 상세가 없거나 규격 형태가 아니면 `undefined` |
 | `notified` | 서비스가 이 실패를 `notify.error` 로 **이미 사용자에게 알렸는가**(읽기 전용). 쓰기 실패를 알렸으면 `true`, 읽기·`*Quiet`·401 이나 `notify.error` 미설정이면 `false` |
 
@@ -280,7 +281,7 @@ window.addEventListener('unhandledrejection', (ev) => {
 | 서버 주도 페이징 — `@odata.nextLink`(상대·절대) | 구현 | `odataGet` 은 끝까지 따라가고, `odataGetPage` 는 `nextLink` 를 준다. 서비스 오리진 밖 · 이미 읽은 링크로의 순환은 던진다 |
 | `nextLink` 를 불투명하게 따라가기(Protocol §11.2.6.7) | 구현 | 서버가 쓴 쿼리가 바이트 그대로 나간다(`@iyulab/http-client` 0.10.3 이상 — 범위 `^0.10.0` 이면 재설치로 받는다) |
 | `$count=true` → `@odata.count` · `odataCount` | 구현 | `odataCount` 는 `$top=0&$count=true` 로 행 없이 건수만 |
-| 오류 봉투 — `error.code`·`message`·`details[]`(`code`·`message`·`target`) | 구현 | `ApiError.message`·`ApiError.details` · `innererror` 는 싣지 않는다(서버의 디버깅용이지 계약이 아니다) |
+| 오류 봉투 — `error.code`·`message`·`details[]`(`code`·`message`·`target`) | 구현 | `ApiError.message`·`ApiError.code`·`ApiError.details` · `innererror` 는 싣지 않는다(서버의 디버깅용이지 계약이 아니다) |
 | 생성 201 · 수정/삭제 204 No Content | 구현 | 빈 바디를 파싱하지 않는다 |
 | 키 리터럴(URL Conventions §4.3.1) | 호출자 | `id` 는 URL 에 쓰이는 리터럴 그대로다 — GUID·숫자는 그대로, 문자열 키는 호출자가 `'…'` 로 감싸고 `'` 를 `''` 로. 클라이언트는 메타데이터 없이 둘을 가를 수 없다 |
 | 낙관적 동시성 — ETag · `If-Match` · 412 | 미구현 | 서버 지원 확인 뒤에 연다 |

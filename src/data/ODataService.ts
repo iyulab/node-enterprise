@@ -72,13 +72,19 @@ export function wasNotified(error: unknown): boolean {
  */
 export class ApiError extends Error {
   readonly status: number
+  /**
+   * 서버가 정한 거절 코드 — OData v4 오류 봉투의 `error.code`(없으면 최상위 `code`). 같은 상태 안에서
+   * 실패를 가른다(예: 403 중 «비밀번호 변경 필요»). 서버가 주지 않았으면 undefined.
+   */
+  readonly code?: string
   /** OData v4 오류 봉투의 `error.details`(필드별 검증 상세) — 서버 응답에 없거나 파싱 실패면 undefined. */
   readonly details?: ApiErrorDetail[]
-  constructor(message: string, status: number, details?: ApiErrorDetail[]) {
+  constructor(message: string, status: number, init: { code?: string; details?: ApiErrorDetail[] } = {}) {
     super(message)
     this.name = 'ApiError'
     this.status = status
-    this.details = details
+    this.code = init.code
+    this.details = init.details
   }
 
   /**
@@ -245,6 +251,8 @@ export interface ODataServiceConfig {
     status: number
     statusText: string
     rawMessage?: string
+    /** 서버의 거절 코드 — OData v4 `error.code`(없으면 최상위 `code`). `ApiError.code` 와 같은 값. */
+    code?: string
     /** OData v4 `error.details` — 검증을 마친 항목만 실린다(`ApiError.details` 와 같은 값). */
     details?: ApiErrorDetail[]
     body?: unknown
@@ -424,7 +432,7 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   /** OData 응답에서 사용자 친화적 에러 메시지 + 구조화된 필드별 상세를 추출. */
   async function extractErrorInfo(
     res: HttpResponse,
-  ): Promise<{ message: string; details?: ApiErrorDetail[] }> {
+  ): Promise<{ message: string; code?: string; details?: ApiErrorDetail[] }> {
     let body: Record<string, unknown> | undefined
     try {
       body = await res.json<Record<string, unknown>>()
@@ -437,14 +445,17 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     const rawMessage = typeof rawVal === 'string' ? rawVal : undefined
     // OData v4 오류 봉투의 error.details(필드별 검증 상세) — 이미 파싱된 값을 검증만 해서 싣는다.
     const details = extractErrorDetails(errorObj?.details)
+    // 거절 코드 — 메시지와 같은 순서(봉투 → 최상위)로 찾고, 빈 문자열은 «없음» 이다.
+    const rawCode = errorObj?.code ?? body?.code
+    const code = typeof rawCode === 'string' && rawCode ? rawCode : undefined
 
     if (config.formatError) {
-      const m = config.formatError({ status: res.status, statusText: res.statusText, rawMessage, details, body })
-      if (m) return { message: m, details }
+      const m = config.formatError({ status: res.status, statusText: res.statusText, rawMessage, code, details, body })
+      if (m) return { message: m, code, details }
     }
     // 너무 긴 raw 메시지(서버 내부 스택 등)는 노출하지 않고 친화 메시지로 대체.
-    if (rawMessage && rawMessage.length <= 200) return { message: rawMessage, details }
-    return { message: messages.http[res.status] ?? `${messages.requestFailed} (${res.status})`, details }
+    if (rawMessage && rawMessage.length <= 200) return { message: rawMessage, code, details }
+    return { message: messages.http[res.status] ?? `${messages.requestFailed} (${res.status})`, code, details }
   }
 
   /**
@@ -459,8 +470,8 @@ export function createODataService(config: ODataServiceConfig): ODataService {
       config.onUnauthorized?.(401)
       throw new ApiError(messages.sessionExpired, 401)
     }
-    const { message, details } = await extractErrorInfo(res)
-    throw new ApiError(message, res.status, details)
+    const { message, code, details } = await extractErrorInfo(res)
+    throw new ApiError(message, res.status, { code, details })
   }
 
   function collectionUrl(entity: string, params?: Record<string, string>): string {

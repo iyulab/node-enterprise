@@ -217,6 +217,40 @@ describe('createODataService — errors', () => {
     await expect(svc.odataPost('Orders', {})).rejects.toMatchObject({ details: undefined })
   })
 
+  it('🔴오류 봉투의 error.code 를 ApiError.code 로 싣는다 — 같은 403 중 서버가 코드로 가른 거절을 구분한다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ error: { code: 'password-change-required', message: 'Change your password' } }, 403))
+    await expect(svc.odataGet('Orders')).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 403,
+      code: 'password-change-required',
+      message: 'Change your password',
+    })
+  })
+
+  it('봉투가 없으면 최상위 code 를 읽고, 빈 문자열·문자열 아닌 code 는 undefined 다', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    enqueue(json({ code: 'rate-limited', message: 'slow down' }, 429))
+    await expect(svc.odataGet('Orders')).rejects.toMatchObject({ status: 429, code: 'rate-limited' })
+
+    enqueue(json({ error: { code: '', message: 'bad' } }, 400))
+    await expect(svc.odataGet('Orders')).rejects.toMatchObject({ code: undefined })
+
+    enqueue(json({ error: { code: 42, message: 'bad' } }, 400))
+    await expect(svc.odataGet('Orders')).rejects.toMatchObject({ code: undefined })
+  })
+
+  it('formatError 가 code 를 받고, 메시지를 바꿔도 code 는 남는다', async () => {
+    const seen: (string | undefined)[] = []
+    const svc = createODataService({
+      baseUrl: BASE,
+      formatError: (info) => { seen.push(info.code); return 'friendly' },
+    })
+    enqueue(json({ error: { code: 'password-change-required', message: 'raw' } }, 403))
+    await expect(svc.odataGet('Orders')).rejects.toMatchObject({ message: 'friendly', code: 'password-change-required' })
+    expect(seen).toEqual(['password-change-required'])
+  })
+
   it('details가 배열이 아니면 undefined다', async () => {
     const svc = createODataService({ baseUrl: BASE })
     enqueue(json({ error: { message: 'bad', details: { code: 'A', message: 'not an array' } } }, 400))

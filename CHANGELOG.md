@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.24.0] - 2026-10-05
+
+### Added
+
+- **`ApiError.code`** — the server's rejection code from the OData error envelope (`error.code`, or a
+  top-level `code` when there is no envelope); `undefined` when absent or empty. A status alone could
+  not tell apart failures the server distinguishes by code (for example a 403 that means "change your
+  password" from any other 403). `formatError` receives the same `code`, and it stays on the error
+  when `formatError` replaces the message. The OData coverage table listed `error.code` as
+  implemented; it is now carried.
+
+### Changed (breaking)
+
+- **`new ApiError(message, status, init?)`** — the third argument is `{ code?, details? }` instead of
+  the details array. Only code that constructs `ApiError` itself (test doubles, adapters) changes:
+  `new ApiError(msg, 400, details)` becomes `new ApiError(msg, 400, { details })`.
+
 ## [0.23.0] - 2026-10-05
 
 ### Removed (breaking)

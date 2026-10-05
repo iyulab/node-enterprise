@@ -32,7 +32,7 @@ export const svc = createODataService({
 error message), `requestFailed` (fallback), `http` (status → message map; defaults for
 400, 403, 404, 409, 500; your entries are merged in).
 
-`formatError` receives `{ status, statusText, rawMessage?, details?, body? }`.
+`formatError` receives `{ status, statusText, rawMessage?, code?, details?, body? }`.
 Message resolution order: `formatError` result → server message (if ≤ 200 chars) →
 `messages.http[status]` → `` `${requestFailed} (${status})` ``. The server message is read
 from `error.message`, then top-level `message`, then `Message`.
@@ -217,6 +217,7 @@ Network failures surface as the underlying error, and the paging guards above th
 |---|---|
 | `message` | User-facing message (see resolution order above) |
 | `status` | HTTP status |
+| `code` | The server's rejection code — OData `error.code` (top-level `code` when there is no envelope); `undefined` when absent or empty. Branch on it to tell apart failures that share a status |
 | `details` | `ApiErrorDetail[] \| undefined` from OData `error.details` |
 | `notified` | Read-only: `true` if the service already showed this failure via `notify.error` |
 
