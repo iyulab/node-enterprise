@@ -43,6 +43,7 @@ export const auth = createAuthClient<User, { Username: string; Password: string 
 | `invalidCredentials` | Login returns 401 | `Invalid username or password.` |
 | `loginFailed` | Login returns another non-2xx and no server message is found | `Login failed.` |
 | `sessionCheckFailed` | `fetchMe` gets a non-2xx other than 401 and no server message is found | `Could not verify the session.` |
+| `logoutFailed` | `logout` gets a non-2xx other than 401 and no server message is found | `Could not sign out.` |
 | `networkError` | No response at all (network failure, offline) | `A network error occurred.` |
 | `invalidResponse` | A 2xx response whose body is not JSON | `The server returned an unreadable response.` |
 
@@ -55,7 +56,7 @@ The client uses plain `fetch`, deliberately bypassing any HTTP interceptors: a 4
 |---|---|---|
 | `fetchMe()` | `Promise<SessionState<TUser>>` | One of three answers, below. Never throws |
 | `login(credentials)` | `Promise<LoginResult<TUser>>` | Never throws; see below |
-| `logout()` | `Promise<void>` | POSTs to `logoutUrl`; network errors are swallowed |
+| `logout()` | `Promise<LogoutResult>` | POSTs to `logoutUrl`. Never throws; see below |
 
 `SessionState<TUser>` — a session lookup has three answers, and only one of them means
 "sign in":
@@ -96,6 +97,18 @@ the device goes offline. Keep the current screen (or an offline view) and retry 
 
 ### Automatic permission sync
 
+`LogoutResult` is `{ ok: true }` or `{ ok: false, message, error }`. With a cookie session, signing out
+*is* the server ending the session — so only 2xx and **401** (the session is already gone) are success.
+Any other answer, or no answer, means the cookie may still be valid: keep the screen, say `message`,
+and let the user retry. Treating it as signed out would hand the session to the next person at a shared
+terminal.
+
+```ts
+const r = await auth.logout();
+if (r.ok) navigate('/login');
+else Toast.error(r.message);
+```
+
 When `getPermissions` is set:
 
 | Event | Store action |
@@ -103,7 +116,8 @@ When `getPermissions` is set:
 | `fetchMe()` gives `authenticated`, `login()` succeeds | `store.set(getPermissions(user))` |
 | `fetchMe()` gives `anonymous` | `store.clear()` |
 | `fetchMe()` gives `unknown` | nothing: the last known permissions stay (a store never answered stays *not known*) |
-| `logout()` (always, even if the request fails) | `store.clear()` |
+| `logout()` succeeds (2xx or 401) | `store.clear()` |
+| `logout()` fails | nothing: the session is still alive, so its permissions stay |
 
 Without `getPermissions` the store is never touched — call `setPermissions` yourself.
 

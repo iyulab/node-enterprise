@@ -190,18 +190,63 @@ describe('createAuthClient — login', () => {
   })
 })
 
+// 쿠키 세션에서 로그아웃의 효과는 서버가 세션을 끊는 것이다 — «답을 못 받음» 을 «로그아웃됨» 으로 접으면 쿠키가 산 채로
+// 화면이 로그인으로 서고, 공용 단말에서 다음 사람이 그 세션을 이어받는다.
 describe('createAuthClient — logout', () => {
-  it('posts to logoutUrl and clears permissions; swallows errors', async () => {
+  const setup = () => {
     const store = createPermissionStore(['orders.read'])
-    const auth = createAuthClient<User, Cred>({
-      ...urls,
-      getPermissions: (u) => u.Permissions,
-      permissionStore: store,
-    })
-    enqueue(new Error('server down'))
-    await expect(auth.logout()).resolves.toBeUndefined()
+    const auth = createAuthClient<User, Cred>({ ...urls, getPermissions: (u) => u.Permissions, permissionStore: store })
+    return { store, auth }
+  }
+
+  it('2xx → ok, posts to logoutUrl, clears permissions', async () => {
+    const { store, auth } = setup()
+    enqueue(new Response(null, { status: 204 }))
+    expect(await auth.logout()).toEqual({ ok: true })
     expect(recorded[0].url).toBe('/api/auth/logout')
+    expect(recorded[0].method).toBe('POST')
     expect(store.get().size).toBe(0)
+  })
+
+  it('401 → ok: the session is already gone', async () => {
+    const { store, auth } = setup()
+    enqueue(new Response(null, { status: 401 }))
+    expect(await auth.logout()).toEqual({ ok: true })
+    expect(store.get().size).toBe(0)
+  })
+
+  it('5xx → not ok, server message or the fallback, permissions kept', async () => {
+    const { store, auth } = setup()
+    enqueue(json({ error: { code: 'maintenance', message: 'Back soon' } }, 503))
+    const r = await auth.logout()
+    if (r.ok) throw new Error('expected failure')
+    expect(r.message).toBe('Back soon')
+    expect(r.error.status).toBe(503)
+    expect(r.error.code).toBe('maintenance')
+    expect(store.get().has('orders.read')).toBe(true)
+
+    enqueue(new Response(null, { status: 500 }))
+    const r2 = await auth.logout()
+    if (r2.ok) throw new Error('expected failure')
+    expect(r2.message).toBe('Could not sign out.')
+  })
+
+  it('network failure → not ok with status 0, permissions kept', async () => {
+    const { store, auth } = setup()
+    enqueue(new Error('offline'))
+    const r = await auth.logout()
+    if (r.ok) throw new Error('expected failure')
+    expect(r.message).toBe('A network error occurred.')
+    expect(r.error.status).toBe(0)
+    expect(store.get().has('orders.read')).toBe(true)
+  })
+
+  it('messages.logoutFailed localizes the fallback', async () => {
+    const auth = createAuthClient<User, Cred>({ ...urls, messages: { logoutFailed: '로그아웃하지 못했습니다.' } })
+    enqueue(new Response(null, { status: 500 }))
+    const r = await auth.logout()
+    if (r.ok) throw new Error('expected failure')
+    expect(r.message).toBe('로그아웃하지 못했습니다.')
   })
 })
 

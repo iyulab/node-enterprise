@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.26.0] - 2026-10-06
+
+### Changed (breaking)
+
+- **`createAuthClient().logout()` returns a `LogoutResult` and no longer reports a failed sign-out as done.** It
+  ignored the response and swallowed network errors, then cleared the permission store — so when the server could
+  not end the session (a 5xx, or no answer) the screen moved to sign-in while the session cookie stayed valid, and at
+  a shared terminal the next person reloading the page was signed in. Now 2xx and 401 (the session is already gone)
+  return `{ ok: true }` and clear permissions; any other answer or a network failure returns
+  `{ ok: false, message, error }` (the shape of `LoginResult`) and leaves permissions alone. It still never throws.
+  Callers that `await auth.logout()` and then navigate should check `ok` first.
+
+### Added
+
+- `messages.logoutFailed` — fallback when a failed sign-out carries no server message (default `Could not sign out.`).
+
 ## [0.25.1] - 2026-10-06
 
 ### Documentation

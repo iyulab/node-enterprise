@@ -348,6 +348,11 @@ const session = await auth.fetchMe()
 if (session.status === 'anonymous') showLogin()                    // 401 — 로그인 화면
 else if (session.status === 'unknown') showOffline(session.error)  // 답을 못 받음 — 로그인으로 보내지 않는다
 
+// 로그아웃도 결과를 본다 — 서버가 세션을 끊지 못했으면(2xx·401 이 아닌 답 · 응답 없음) 쿠키가 살아 있다
+const out = await auth.logout()
+if (out.ok) showLogin()
+else showError(out.message)                                        // 화면을 지키고 다시 시도하게 한다
+
 // 어디서나 권한 판정(부팅 스냅샷)
 if (hasPermission('orders.write')) { /* 저장 버튼 노출 */ }
 ```

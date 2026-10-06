@@ -34,6 +34,8 @@ export interface AuthClientMessages {
   loginFailed: string
   /** 세션 조회가 2xx·401 이 아닌 답을 받았을 때의 폴백 — 서버 메시지가 없을 때 */
   sessionCheckFailed: string
+  /** 로그아웃이 2xx·401 이 아닌 답을 받았을 때의 폴백 — 서버 메시지가 없을 때 */
+  logoutFailed: string
   /** 응답을 받지 못함(네트워크·오프라인) */
   networkError: string
   /** 2xx 응답의 본문을 읽지 못함 */
@@ -44,6 +46,7 @@ const DEFAULT_AUTH_MESSAGES: AuthClientMessages = {
   invalidCredentials: 'Invalid username or password.',
   loginFailed: 'Login failed.',
   sessionCheckFailed: 'Could not verify the session.',
+  logoutFailed: 'Could not sign out.',
   networkError: 'A network error occurred.',
   invalidResponse: 'The server returned an unreadable response.',
 }
@@ -70,6 +73,17 @@ export type LoginResult<TUser> =
   | { ok: true; user: TUser }
   | { ok: false; message: string; error: ApiError }
 
+/**
+ * 로그아웃 결과 — 쿠키 세션에서 로그아웃의 효과는 **서버가 세션을 끊는 것** 이다. 그래서 «답을 못 받음» 은 실패다:
+ * 그때 쿠키는 살아 있고, 화면이 «로그아웃됨» 으로 서면 공용 단말에서 다음 사람이 그 세션을 이어받는다.
+ * - `ok: true`: 2xx, 또는 401(세션이 이미 없다는 서버의 답).
+ * - `ok: false`: 그 밖의 답 · 네트워크 실패. 화면은 머무르고 `message` 를 알린다. `error.status` 는 응답이 없던
+ *   실패에서 `0` 이다.
+ */
+export type LogoutResult =
+  | { ok: true }
+  | { ok: false; message: string; error: ApiError }
+
 export interface AuthClientConfig<TUser> {
   /** 현재 세션 조회 URL (GET) */
   meUrl: string
@@ -89,8 +103,8 @@ export interface AuthClientConfig<TUser> {
    */
   extractLoginError?: (body: unknown) => string | undefined
   /**
-   * user 에서 권한 코드 배열을 추출. 지정하면 «인증됨» 에서 권한 store 를 갱신하고, «미인증»·`logout` 에서
-   * 비운다. «모름» 에는 건드리지 않는다(마지막으로 알던 권한이 남고, 처음이면 store 는 계속 «모름»).
+   * user 에서 권한 코드 배열을 추출. 지정하면 «인증됨» 에서 권한 store 를 갱신하고, «미인증»·성공한 `logout` 에서
+   * 비운다(실패한 로그아웃은 세션이 살아 있으므로 건드리지 않는다). «모름» 에는 건드리지 않는다(마지막으로 알던 권한이 남고, 처음이면 store 는 계속 «모름»).
    */
   getPermissions?: (user: TUser) => string[]
   /** 권한 자동 갱신 대상 store(기본: `defaultPermissionStore`). */
@@ -102,8 +116,8 @@ export interface AuthClient<TUser, TCredentials> {
   fetchMe(): Promise<SessionState<TUser>>
   /** 로그인. 던지지 않는다. 성공 시 권한 store 자동 갱신(getPermissions 지정 시). */
   login(credentials: TCredentials): Promise<LoginResult<TUser>>
-  /** 로그아웃. 권한 store 자동 clear(getPermissions 지정 시). */
-  logout(): Promise<void>
+  /** 로그아웃. 던지지 않는다 — 결과는 `LogoutResult`. 성공 시에만 권한 store 자동 clear(getPermissions 지정 시). */
+  logout(): Promise<LogoutResult>
 }
 
 /** 본문을 JSON 으로 읽는다 — 비었거나 JSON 이 아니면 undefined. */
@@ -197,13 +211,19 @@ export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
     return { ok: true, user }
   }
 
-  async function logout(): Promise<void> {
+  async function logout(): Promise<LogoutResult> {
+    let res: Response
     try {
-      await fetch(url(config.logoutUrl), { method: 'POST', credentials })
+      res = await fetch(url(config.logoutUrl), { method: 'POST', credentials })
     } catch {
-      /* swallow — 로그아웃 실패는 클라이언트 세션 정리를 막지 않는다 */
+      return { ok: false, message: messages.networkError, error: new ApiError(messages.networkError, 0) }
+    }
+    if (!res.ok && res.status !== 401) {
+      const error = await failureFrom(res, messages.logoutFailed)
+      return { ok: false, message: error.message, error }
     }
     syncPermissions(null)
+    return { ok: true }
   }
 
   return { fetchMe, login, logout }
