@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.24.1] - 2026-10-06
+
+### Documentation
+
+- **Quick Start** — a first React page (a form section with `FormSection`/`FormRow`, the
+  `@iyulab/components` React wrappers and `DateHelper`) with the full install line, including the
+  `@lit/react` peer the wrappers need. It builds, type-checks and renders as written.
+
 ## [0.24.0] - 2026-10-05
 
 ### Added

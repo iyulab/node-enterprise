@@ -16,6 +16,44 @@ npm install @iyulab/enterprise @iyulab/components
 | `@iyulab/enterprise/react` | `FormSection` · `FormRow` |
 | `@iyulab/enterprise/icons` | `house` 아이콘 라이브러리 등록(부수효과 import) |
 
+## Quick Start
+
+React 앱의 첫 페이지 — 폼 섹션 하나(Vite 기준, `index.html` 이 `src/main.tsx` 를 모듈로 싣는다).
+
+```bash
+npm install @iyulab/enterprise @iyulab/components @lit/react react react-dom
+```
+
+```tsx
+// src/main.tsx
+import '@iyulab/components/styles/tokens.css';
+import { createRoot } from 'react-dom/client';
+import { UInput, UTextarea, UButton } from '@iyulab/components/react';
+import { FormSection, FormRow } from '@iyulab/enterprise/react';
+import { DateHelper } from '@iyulab/enterprise';
+
+function OrderForm() {
+  return (
+    <form style={{ maxWidth: 640, margin: 32 }} onSubmit={(e) => e.preventDefault()}>
+      <FormSection title="Order">
+        <FormRow>
+          <UInput name="customer" label="Customer" required />
+          <UInput name="due" label="Due date" value={DateHelper.formatDate(new Date())} />
+        </FormRow>
+        <FormRow full>
+          <UTextarea name="note" label="Note" />
+        </FormRow>
+      </FormSection>
+      <UButton type="submit" color="primary">Save</UButton>
+    </form>
+  );
+}
+
+createRoot(document.body.appendChild(document.createElement('div'))).render(<OrderForm />);
+```
+
+데이터 서비스(`createODataService`)·인증(`createAuthClient`)·권한 store 는 아래 [Usage](#usage) 에 있습니다.
+
 ## 무엇을 제공하나
 
 ### 1. 고유 export (enterprise에서만 제공)
