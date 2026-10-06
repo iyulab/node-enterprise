@@ -42,7 +42,9 @@ export const auth = createAuthClient<User, { Username: string; Password: string 
 |---|---|---|
 | `invalidCredentials` | Login returns 401 | `Invalid username or password.` |
 | `loginFailed` | Login returns another non-2xx and no server message is found | `Login failed.` |
-| `networkError` | The login request throws | `A network error occurred.` |
+| `sessionCheckFailed` | `fetchMe` gets a non-2xx other than 401 and no server message is found | `Could not verify the session.` |
+| `networkError` | No response at all (network failure, offline) | `A network error occurred.` |
+| `invalidResponse` | A 2xx response whose body is not JSON | `The server returned an unreadable response.` |
 
 The client uses plain `fetch`, deliberately bypassing any HTTP interceptors: a 401 from
 `meUrl` is the "not signed in" signal, not an error to redirect on.
@@ -51,28 +53,46 @@ The client uses plain `fetch`, deliberately bypassing any HTTP interceptors: a 4
 
 | Method | Returns | Behaviour |
 |---|---|---|
-| `fetchMe()` | `Promise<TUser \| null>` | `null` for any non-2xx response or network error. Never throws |
+| `fetchMe()` | `Promise<SessionState<TUser>>` | One of three answers, below. Never throws |
 | `login(credentials)` | `Promise<LoginResult<TUser>>` | Never throws; see below |
 | `logout()` | `Promise<void>` | POSTs to `logoutUrl`; network errors are swallowed |
 
-`LoginResult<TUser>` fields: `ok`, `user` (on success), `message` (on failure).
+`SessionState<TUser>` — a session lookup has three answers, and only one of them means
+"sign in":
+
+| `status` | When | Extra field |
+|---|---|---|
+| `'authenticated'` | 2xx with the user | `user` |
+| `'anonymous'` | The server answered **401** | — |
+| `'unknown'` | Any other non-2xx, no response (network/offline), or an unreadable 2xx body | `error: ApiError` (`status` is `0` when there was no response) |
+
+`LoginResult<TUser>` is `{ ok: true, user }` or `{ ok: false, message, error }`. `message` is
+user-facing (`invalidCredentials` for 401, else the server message, else `loginFailed`;
+`networkError` with no response). `error` is an `ApiError` carrying `status`, the server's `code`
+and `details` read from the same error envelope as the data service — branch on them:
 
 ```ts
 const result = await auth.login({ Username: name, Password: pw })
 if (result.ok) {
   startApp(result.user)
+} else if (result.error.status === 403 && result.error.code === 'password-change-required') {
+  showChangePassword()
 } else {
-  showError(result.message)   // invalidCredentials / server message / loginFailed / networkError
+  showError(result.message)
 }
 ```
 
 ### Boot gate
 
 ```ts
-const user = await auth.fetchMe()
-if (!user) showLoginScreen()      // the library never redirects
-else startApp(user)
+const session = await auth.fetchMe()
+if (session.status === 'authenticated') startApp(session.user)
+else if (session.status === 'anonymous') showLoginScreen()   // the library never redirects
+else showUnavailable(session.error)                            // unknown: do not send them to sign in
 ```
+
+Treating `unknown` as signed out logs everyone out the moment the server briefly returns 503 or
+the device goes offline. Keep the current screen (or an offline view) and retry instead.
 
 ### Automatic permission sync
 
@@ -80,8 +100,9 @@ When `getPermissions` is set:
 
 | Event | Store action |
 |---|---|
-| `fetchMe()` succeeds, `login()` succeeds | `store.set(getPermissions(user))` |
-| `fetchMe()` returns `null` | `store.clear()` |
+| `fetchMe()` gives `authenticated`, `login()` succeeds | `store.set(getPermissions(user))` |
+| `fetchMe()` gives `anonymous` | `store.clear()` |
+| `fetchMe()` gives `unknown` | nothing: the last known permissions stay (a store never answered stays *not known*) |
 | `logout()` (always, even if the request fails) | `store.clear()` |
 
 Without `getPermissions` the store is never touched — call `setPermissions` yourself.
@@ -102,6 +123,7 @@ server are not reflected until the next `set` (e.g. next login or `fetchMe`); us
 | `hasAnyPermission(codes)` | Has at least one; an empty list returns `true` |
 | `hasAllPermissions(codes)` | Has all; an empty list returns `true` |
 | `clearPermissions()` | Empty the set |
+| `permissionsKnown()` | Whether the default store has been answered yet (`isKnown()`) |
 
 ```ts
 import { hasPermission, hasAnyPermission } from '@iyulab/enterprise'
@@ -119,8 +141,14 @@ if (hasAnyPermission(['reports.view', 'reports.admin'])) renderReportsLink()
 | `has(code)` | Has one code |
 | `hasAny(codes)` | At least one (empty → `true`) |
 | `hasAll(codes)` | All (empty → `true`) |
-| `clear()` | Empty the set; notifies only if it was non-empty |
-| `subscribe(listener)` | `listener(codes)` on every change; returns an unsubscribe function |
+| `clear()` | Empty the set: known, with no permissions. Notifies only if something changed |
+| `isKnown()` | `false` until the first `set`/`clear` (unless created with `initial`) |
+| `subscribe(listener)` | `listener(codes)` on every change, including becoming known; returns an unsubscribe function |
+
+**Not known is not "no permissions".** Right after boot, and while the session is `unknown`,
+`has()` returns `false` because nothing has been answered yet. A UI that hides or disables
+controls on `has() === false` should wait while `isKnown()` is `false`, so menus do not render as
+forbidden and then flip.
 
 ### Isolated stores
 

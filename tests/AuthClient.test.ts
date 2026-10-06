@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createAuthClient } from '../src/auth/AuthClient'
 import { createPermissionStore } from '../src/auth/permissions'
+import { ApiError } from '../src/data/ODataService'
 
 interface User {
   Id: string
@@ -46,35 +47,76 @@ const urls = {
 }
 
 describe('createAuthClient — fetchMe', () => {
-  it('returns the user on 200', async () => {
+  it('2xx → authenticated with the user', async () => {
     const auth = createAuthClient<User, Cred>({ ...urls })
     enqueue(json({ Id: 'u1', Permissions: ['orders.read'] }))
-    const user = await auth.fetchMe()
-    expect(user).toEqual({ Id: 'u1', Permissions: ['orders.read'] })
+    expect(await auth.fetchMe()).toEqual({ status: 'authenticated', user: { Id: 'u1', Permissions: ['orders.read'] } })
     expect(recorded[0].url).toBe('/api/auth/me')
   })
 
-  it('returns null on 401 and on network error', async () => {
+  it('401 → anonymous', async () => {
     const auth = createAuthClient<User, Cred>({ ...urls })
     enqueue(new Response(null, { status: 401 }))
-    expect(await auth.fetchMe()).toBeNull()
-    enqueue(new Error('offline'))
-    expect(await auth.fetchMe()).toBeNull()
+    expect(await auth.fetchMe()).toEqual({ status: 'anonymous' })
   })
 
-  it('syncs permission store on success and clears on null', async () => {
+  it('network failure → unknown with status 0, never anonymous', async () => {
+    const auth = createAuthClient<User, Cred>({ ...urls })
+    enqueue(new Error('offline'))
+    const s = await auth.fetchMe()
+    expect(s.status).toBe('unknown')
+    if (s.status !== 'unknown') return
+    expect(s.error).toBeInstanceOf(ApiError)
+    expect(s.error.status).toBe(0)
+    expect(s.error.message).toBe('A network error occurred.')
+  })
+
+  it('5xx / 403 → unknown carrying status, envelope code and details', async () => {
+    const auth = createAuthClient<User, Cred>({ ...urls })
+    enqueue(json({ error: { code: 'maintenance', message: 'Back soon', details: [{ code: 'x', message: 'y' }, { bad: 1 }] } }, 503))
+    const s = await auth.fetchMe()
+    if (s.status !== 'unknown') throw new Error(`expected unknown, got ${s.status}`)
+    expect(s.error.status).toBe(503)
+    expect(s.error.code).toBe('maintenance')
+    expect(s.error.message).toBe('Back soon')
+    expect(s.error.details).toEqual([{ code: 'x', message: 'y' }])
+    enqueue(new Response(null, { status: 403 }))
+    const t = await auth.fetchMe()
+    if (t.status !== 'unknown') throw new Error(`expected unknown, got ${t.status}`)
+    expect(t.error.status).toBe(403)
+    expect(t.error.message).toBe('Could not verify the session.')
+  })
+
+  it('unreadable 2xx body → unknown', async () => {
+    const auth = createAuthClient<User, Cred>({ ...urls })
+    enqueue(new Response('<html>', { status: 200 }))
+    const s = await auth.fetchMe()
+    if (s.status !== 'unknown') throw new Error(`expected unknown, got ${s.status}`)
+    expect(s.error.status).toBe(200)
+  })
+
+  it('syncs permissions on authenticated, clears on anonymous, keeps them on unknown', async () => {
     const store = createPermissionStore()
     const auth = createAuthClient<User, Cred>({
       ...urls,
       getPermissions: (u) => u.Permissions,
       permissionStore: store,
     })
+    expect(store.isKnown()).toBe(false)
+    enqueue(new Error('offline'))
+    await auth.fetchMe()
+    expect(store.isKnown()).toBe(false) // first answer unknown — still unknown, not «no permissions»
     enqueue(json({ Id: 'u1', Permissions: ['orders.read', 'orders.write'] }))
     await auth.fetchMe()
+    expect(store.isKnown()).toBe(true)
     expect(store.has('orders.write')).toBe(true)
+    enqueue(new Response(null, { status: 503 }))
+    await auth.fetchMe()
+    expect(store.has('orders.write')).toBe(true) // last known permissions survive an outage
     enqueue(new Response(null, { status: 401 }))
     await auth.fetchMe()
     expect(store.get().size).toBe(0)
+    expect(store.isKnown()).toBe(true) // known: no permissions
   })
 })
 
@@ -88,35 +130,63 @@ describe('createAuthClient — login', () => {
     })
     enqueue(json({ Id: 'u1', Permissions: ['orders.read'] }))
     const result = await auth.login({ Username: 'a', Password: 'b' })
-    expect(result.ok).toBe(true)
-    expect(result.user?.Id).toBe('u1')
+    if (!result.ok) throw new Error('expected ok')
+    expect(result.user.Id).toBe('u1')
     expect(recorded[0].method).toBe('POST')
     expect(JSON.parse(recorded[0].body!)).toEqual({ Username: 'a', Password: 'b' })
     expect(store.has('orders.read')).toBe(true)
   })
 
-  it('401 → invalidCredentials message (locale override)', async () => {
+  it('401 → invalidCredentials message (locale override) with a 401 error', async () => {
     const auth = createAuthClient<User, Cred>({
       ...urls,
       messages: { invalidCredentials: '사용자명 또는 비밀번호가 올바르지 않습니다.' },
     })
-    enqueue(new Response(null, { status: 401 }))
+    enqueue(json({ message: 'Unauthorized' }, 401))
     const result = await auth.login({ Username: 'a', Password: 'x' })
-    expect(result).toEqual({ ok: false, message: '사용자명 또는 비밀번호가 올바르지 않습니다.' })
+    if (result.ok) throw new Error('expected failure')
+    expect(result.message).toBe('사용자명 또는 비밀번호가 올바르지 않습니다.')
+    expect(result.error.status).toBe(401)
   })
 
-  it('non-401 failure extracts server Message, falls back otherwise', async () => {
+  it('non-401 failure keeps status and server code; message from server, fallback otherwise', async () => {
     const auth = createAuthClient<User, Cred>({ ...urls })
-    enqueue(json({ Message: '계정이 잠겼습니다' }, 403))
-    expect((await auth.login({ Username: 'a', Password: 'b' })).message).toBe('계정이 잠겼습니다')
-    enqueue(new Response(null, { status: 500 }))
-    expect((await auth.login({ Username: 'a', Password: 'b' })).message).toBe('Login failed.')
+    enqueue(json({ error: { code: 'password-change-required', message: '비밀번호를 바꿔야 합니다' } }, 403))
+    const r1 = await auth.login({ Username: 'a', Password: 'b' })
+    if (r1.ok) throw new Error('expected failure')
+    expect(r1.message).toBe('비밀번호를 바꿔야 합니다')
+    expect(r1.error.status).toBe(403)
+    expect(r1.error.code).toBe('password-change-required')
+    enqueue(json({ Message: '계정이 잠겼습니다' }, 423))
+    const r2 = await auth.login({ Username: 'a', Password: 'b' })
+    if (r2.ok) throw new Error('expected failure')
+    expect(r2.message).toBe('계정이 잠겼습니다')
+    enqueue(new Response(null, { status: 429 }))
+    const r3 = await auth.login({ Username: 'a', Password: 'b' })
+    if (r3.ok) throw new Error('expected failure')
+    expect(r3.message).toBe('Login failed.')
+    expect(r3.error.status).toBe(429)
   })
 
-  it('network error → networkError message', async () => {
+  it('extractLoginError picks the message; code still comes from the envelope', async () => {
+    const auth = createAuthClient<User, Cred>({
+      ...urls,
+      extractLoginError: (b) => (b as { reason?: string }).reason,
+    })
+    enqueue(json({ reason: 'Locked', code: 'locked' }, 403))
+    const r = await auth.login({ Username: 'a', Password: 'b' })
+    if (r.ok) throw new Error('expected failure')
+    expect(r.message).toBe('Locked')
+    expect(r.error.code).toBe('locked')
+  })
+
+  it('network error → networkError message, status 0', async () => {
     const auth = createAuthClient<User, Cred>({ ...urls })
     enqueue(new Error('offline'))
-    expect((await auth.login({ Username: 'a', Password: 'b' })).message).toBe('A network error occurred.')
+    const r = await auth.login({ Username: 'a', Password: 'b' })
+    if (r.ok) throw new Error('expected failure')
+    expect(r.message).toBe('A network error occurred.')
+    expect(r.error.status).toBe(0)
   })
 })
 

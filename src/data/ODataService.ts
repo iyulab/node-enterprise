@@ -17,6 +17,7 @@
  */
 import { HttpClient, type HttpResponse, type RequestOptions } from '@iyulab/http-client'
 import buildQuery from 'odata-query'
+import { readErrorEnvelope } from './error-envelope'
 
 /**
  * OData v4 오류 봉투의 `error.details` 항목 — 필드별 검증 실패 상세.
@@ -29,23 +30,6 @@ export interface ApiErrorDetail {
   code: string
   message: string
   target?: string
-}
-
-/**
- * `error.details` 를 검증해 추출한다 — 규격이 요구하는 형태(`code`/`message` 둘 다 문자열)를
- * 갖춘 항목만 남긴다. 이 파일이 `error.message` 에 이미 적용하는 규칙(`typeof === "string"` 을
- * 확인한 뒤 사용)과 같은 이유다: 검증 없이 캐스팅하면 타입만 맞고 런타임에 호출부가 깨진다.
- * 쓸 수 있는 항목이 하나도 없으면 undefined 로 정규화한다 — 빈 배열을 주면 호출부의
- * `if (e.details)` 가 참이 되어 "상세가 있다"고 오해한다.
- */
-function extractErrorDetails(raw: unknown): ApiErrorDetail[] | undefined {
-  if (!Array.isArray(raw)) return undefined
-  const details = raw.filter((d): d is ApiErrorDetail => {
-    if (typeof d !== "object" || d === null) return false
-    const rec = d as Record<string, unknown>
-    return typeof rec.code === "string" && typeof rec.message === "string"
-  })
-  return details.length > 0 ? details : undefined
 }
 
 /**
@@ -439,15 +423,8 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     } catch {
       body = undefined
     }
-    const errorObj = body?.error as Record<string, unknown> | undefined
-    // OData 는 error.message(lowercase), 커스텀 REST 는 최상위 Message(PascalCase) 컨벤션을 함께 지원.
-    const rawVal = errorObj?.message ?? body?.message ?? body?.Message
-    const rawMessage = typeof rawVal === 'string' ? rawVal : undefined
-    // OData v4 오류 봉투의 error.details(필드별 검증 상세) — 이미 파싱된 값을 검증만 해서 싣는다.
-    const details = extractErrorDetails(errorObj?.details)
-    // 거절 코드 — 메시지와 같은 순서(봉투 → 최상위)로 찾고, 빈 문자열은 «없음» 이다.
-    const rawCode = errorObj?.code ?? body?.code
-    const code = typeof rawCode === 'string' && rawCode ? rawCode : undefined
+    // OData 봉투(error.*)와 커스텀 REST 최상위(message·Message·code) 관례를 함께 읽는다 — 인증 클라이언트와 같은 규칙.
+    const { rawMessage, code, details } = readErrorEnvelope(body)
 
     if (config.formatError) {
       const m = config.formatError({ status: res.status, statusText: res.statusText, rawMessage, code, details, body })

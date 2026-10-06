@@ -3,6 +3,7 @@ import {
   createPermissionStore,
   defaultPermissionStore,
   setPermissions,
+  permissionsKnown,
   hasPermission,
   hasAnyPermission,
   hasAllPermissions,
@@ -47,6 +48,20 @@ describe('createPermissionStore', () => {
     const store = createPermissionStore()
     expect(store.has('anything')).toBe(false)
   })
+
+  it('separates «not known yet» from «known: none»', () => {
+    const listener = vi.fn()
+    const store = createPermissionStore()
+    store.subscribe(listener)
+    expect(store.isKnown()).toBe(false)
+    store.clear() // empty but unknown → becomes known, emits
+    expect(store.isKnown()).toBe(true)
+    expect(listener).toHaveBeenCalledTimes(1)
+    store.clear() // already known-empty → no emit
+    expect(listener).toHaveBeenCalledTimes(1)
+    expect(createPermissionStore(['a']).isKnown()).toBe(true)
+    expect(createPermissionStore([]).isKnown()).toBe(true)
+  })
 })
 
 describe('default singleton free functions', () => {
@@ -59,5 +74,6 @@ describe('default singleton free functions', () => {
     expect(defaultPermissionStore.has('reports.view')).toBe(true)
     clearPermissions()
     expect(hasPermission('reports.view')).toBe(false)
+    expect(permissionsKnown()).toBe(true)
   })
 })

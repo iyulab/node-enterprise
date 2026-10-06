@@ -342,8 +342,10 @@ export const auth = createAuthClient<User, { Username: string; Password: string 
   messages: { invalidCredentials: '사용자명 또는 비밀번호가 올바르지 않습니다.' },
 })
 
-// 부팅 게이트
-const user = await auth.fetchMe()   // null → 미인증(로그인 화면)
+// 부팅 게이트 — 답은 셋이다
+const session = await auth.fetchMe()
+if (session.status === 'anonymous') showLogin()                    // 401 — 로그인 화면
+else if (session.status === 'unknown') showOffline(session.error)  // 답을 못 받음 — 로그인으로 보내지 않는다
 
 // 어디서나 권한 판정(부팅 스냅샷)
 if (hasPermission('orders.write')) { /* 저장 버튼 노출 */ }
@@ -355,10 +357,12 @@ if (hasPermission('orders.write')) { /* 저장 버튼 노출 */ }
 |--------|------|
 | `baseUrl` | 상대 URL 앞에 붙일 오리진 (기본 `''` = same-origin) |
 | `credentials` | fetch `credentials` 모드 (기본 `'same-origin'` — 쿠키 세션) |
-| `extractLoginError` | 로그인 실패(non-401) 응답 바디에서 서버 메시지 추출 오버라이드 (기본: `body.Message ?? body.message`) |
+| `extractLoginError` | 로그인 실패(non-401) 응답 바디에서 사용자 대면 메시지 추출 오버라이드 (기본: 봉투 `error.message` → `message` → `Message`) |
 | `permissionStore` | 권한 자동 갱신 대상 store (기본 `defaultPermissionStore`) — 격리가 필요하면 `createPermissionStore()`로 별도 store를 만들어 주입 |
 
-- `fetchMe()` 는 2xx 가 아닌 응답(401 포함)이나 네트워크 오류 시 `null` — 이 신호가 로그인 게이트를 구동한다(라이브러리가 리다이렉트하지 않음).
+- `fetchMe()` 는 던지지 않고 `{ status: 'authenticated', user }` · `{ status: 'anonymous' }`(401) · `{ status: 'unknown', error }`(그 밖의 비-2xx · 네트워크 · 읽을 수 없는 본문) 중 하나를 준다. 로그인 게이트는 `anonymous` 에서만 연다 — `unknown` 을 미인증으로 읽으면 서버가 잠깐 503 을 낸 순간 모두가 로그인 화면으로 간다. 라이브러리는 리다이렉트하지 않는다.
+- `login()` 실패는 `{ ok: false, message, error }` — `error` 는 `ApiError`(`status` · `code` · `details`, 응답이 없으면 `status: 0`)라 429 · 403 거절 코드 같은 갈래로 화면을 나눌 수 있다.
+- 권한 store 는 «모름» 과 «없음» 을 가른다(`isKnown()` · `permissionsKnown()`). `unknown` 세션은 마지막으로 알던 권한을 건드리지 않는다.
 - 도메인 판정(`isPortalUser` 등)·권한 코드 상수는 라이브러리가 아니라 앱 adapter 에 둔다.
 
 ### 도메인 헬퍼

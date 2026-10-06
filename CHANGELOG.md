@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.25.0] - 2026-10-06
+
+### Changed (breaking)
+
+- **`createAuthClient().fetchMe()` returns a `SessionState`**: `{ status: 'authenticated', user }`,
+  `{ status: 'anonymous' }` (the server answered 401), or `{ status: 'unknown', error }` (any other
+  non-2xx, no response, or an unreadable body). It used to return `null` for all of these, so a
+  brief 503 or going offline looked exactly like being signed out and sent signed-in users to the
+  login screen. `unknown` leaves the permission store untouched. Migrate `if (!user)` to
+  `if (session.status === 'anonymous')` and decide what `unknown` shows (keep the screen, retry).
+- **`LoginResult` is a discriminated union**: `{ ok: true, user }` or `{ ok: false, message, error }`.
+  `error` is an `ApiError` with `status` (`0` when there was no response), and the server's `code`
+  and `details` read from the same error envelope as the data service, so a 429 or a 403 with a
+  rejection code can be told apart. `message` is unchanged.
+- The default `extractLoginError` also reads the OData envelope's `error.message` (before `message`
+  and `Message`). A server message longer than 200 characters falls back to `loginFailed`, as the
+  data service already does.
+
+### Added
+
+- **`PermissionStore.isKnown()`** and **`permissionsKnown()`**: whether permissions have been
+  answered yet. A store created without `initial` starts *not known*; `set` and `clear` make it
+  known. Until then an empty set means "not answered", not "no permissions".
+- `AuthClientMessages.sessionCheckFailed` and `invalidResponse`.
+
 ## [0.24.1] - 2026-10-06
 
 ### Documentation
