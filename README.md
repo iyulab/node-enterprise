@@ -87,14 +87,15 @@ React 컴포넌트는 `@iyulab/enterprise/react` 서브패스에 있습니다. `
 
 ```tsx
 import { FormSection, FormRow } from '@iyulab/enterprise/react'
+import { UInput, UTextarea } from '@iyulab/components/react'
 
 <FormSection title="기본 정보">
   <FormRow>
-    <u-input label="이름" />
-    <u-input label="코드" />
+    <UInput label="이름" />
+    <UInput label="코드" />
   </FormRow>
   <FormRow full>
-    <u-textarea label="비고" />
+    <UTextarea label="비고" />
   </FormRow>
 </FormSection>
 ```

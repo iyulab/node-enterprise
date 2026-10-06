@@ -81,14 +81,15 @@ Full details: [references/auth.md](./references/auth.md).
 
 ```tsx
 import { FormSection, FormRow } from '@iyulab/enterprise/react'
+import { UInput, UTextarea } from '@iyulab/components/react'
 
 <FormSection title="General">
   <FormRow>
-    <u-input label="Name" />
-    <u-input label="Code" />
+    <UInput label="Name" />
+    <UInput label="Code" />
   </FormRow>
   <FormRow full>
-    <u-textarea label="Notes" />
+    <UTextarea label="Notes" />
   </FormRow>
 </FormSection>
 ```

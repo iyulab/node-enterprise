@@ -7,19 +7,20 @@ Lit/Vue apps should compose `@iyulab/components` elements directly.
 
 ```tsx
 import { FormSection, FormRow } from '@iyulab/enterprise/react'
+import { UInput, UTextarea } from '@iyulab/components/react'
 
 <FormSection title="General">
   <FormRow>
-    <u-input label="Name" />
-    <u-input label="Code" />
+    <UInput label="Name" />
+    <UInput label="Code" />
   </FormRow>
   <FormRow columns={3}>
-    <u-input label="City" />
-    <u-input label="Region" />
-    <u-input label="Postcode" />
+    <UInput label="City" />
+    <UInput label="Region" />
+    <UInput label="Postcode" />
   </FormRow>
   <FormRow full>
-    <u-textarea label="Notes" />
+    <UTextarea label="Notes" />
   </FormRow>
 </FormSection>
 ```

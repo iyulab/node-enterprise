@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.25.1] - 2026-10-06
+
+### Documentation
+
+- The `FormSection`/`FormRow` examples (README and skill references) used `<u-input>`/`<u-textarea>` in TSX, which a TypeScript React app cannot compile without its own element typings. They now use the `UInput`/`UTextarea` React wrappers from `@iyulab/components/react`, like the Quick Start.
+
 ## [0.25.0] - 2026-10-06
 
 ### Changed (breaking)
