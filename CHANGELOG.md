@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.27.1] - 2026-10-08
+## [0.28.0] - 2026-10-08
 
 ### Added
 
@@ -17,6 +17,8 @@
 
 - The layer charter (`docs/lob-layers.md` §1) — L2 skeletons are framework-neutral custom elements with thin React
   wrappers; the existing React patterns (`FormSection`, `FormRow`) stay as they are.
+
+## [0.27.1] - 2026-10-08
 
 ### Documentation
 
