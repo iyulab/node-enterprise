@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import '@iyulab/components/dist/components/pagination/UPagination.js';
+import '@iyulab/components/dist/components/input/UInput.js';
 import type { UPagination } from '@iyulab/components/dist/components/pagination/UPagination.js';
 import '../../src/list-page';
 import type { UListPage } from '../../src/list/UListPage';
@@ -179,6 +181,20 @@ describe('u-list-page — 검색', () => {
       </u-list-page>`, src);
     const input = page.querySelector('input')!;
     input.dispatchEvent(new CustomEvent('search', { detail: { query: 'kim' }, bubbles: true, composed: true }));
+    expect(src.calls.search).toEqual(['kim']);
+  });
+
+  it('실제 검색 칸(u-input type="search")의 Enter 가 소스 검색어가 된다', async () => {
+    const src = createSource();
+    const page = await mount(`
+      <u-list-page>
+        <u-input slot="filters" type="search" label="Search orders"></u-input>
+        <fake-view slot="view"></fake-view>
+      </u-list-page>`, src);
+    const input = page.querySelector('u-input')!;
+    await input.updateComplete;
+    await userEvent.click(input.shadowRoot!.querySelector('input')!);
+    await userEvent.keyboard('kim{Enter}');
     expect(src.calls.search).toEqual(['kim']);
   });
 
