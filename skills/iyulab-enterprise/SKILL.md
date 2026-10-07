@@ -28,7 +28,7 @@ npm install react
 
 | Import | Contents | Side effects |
 |---|---|---|
-| `@iyulab/enterprise` | `createODataService`, `ApiError`, `wasNotified`, `createAuthClient`, permission store, `ApiConfig`, helpers | Registers the helper locale strings |
+| `@iyulab/enterprise` | `createODataService`, `ApiError`, `wasNotified`, `createAuthClient`, permission store, `bindSource`, `SourceBinding`, `ApiConfig`, helpers | Registers the helper locale strings |
 | `@iyulab/enterprise/react` | `FormSection`, `FormRow` | none |
 | `@iyulab/enterprise/icons` | Registers the `'house'` icon library | opt-in: import once |
 
@@ -108,6 +108,15 @@ count, `full` makes one cell). Both accept `className`/`style`, merged after the
 
 Details: [references/forms-and-helpers.md](./references/forms-and-helpers.md).
 
+## Binding a list
+
+`bindSource(source, element)` ties a data source of `@iyulab/flex-table` (`createODataSource`, `createArraySource`) to
+an element that speaks the list view vocabulary — `flex-table`, `u-rich-table`, `u-data-view`, `u-pagination`, a
+search box. It writes `data`, `totalCount`, `loading`, `error`, `sortCriteria`, `page`, `pageSize` (only those the
+element has) and turns `sort-change`, `page-change` and `search` into source calls. `SourceBinding` is the Lit adapter.
+
+Details: [references/list.md](./references/list.md).
+
 ## Rules of thumb
 
 1. Create **one** service/auth client in an app adapter module and import it everywhere.
@@ -124,5 +133,7 @@ Details: [references/forms-and-helpers.md](./references/forms-and-helpers.md).
   `onMutated`, `notify`, 401 handling, `fetchRaw`, `ApiError`, `notified`/`wasNotified`,
   OData v4 conformance.
 - [references/auth.md](./references/auth.md) — `createAuthClient`, permission store.
+- [references/list.md](./references/list.md) — `bindSource`, `SourceBinding`: one wiring for table, cards, pager
+  and search.
 - [references/forms-and-helpers.md](./references/forms-and-helpers.md) — React form
   layout, `ApiConfig`, domain helpers, `./icons`, where the house values live.

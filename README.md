@@ -68,6 +68,7 @@ createRoot(document.body.appendChild(document.createElement('div'))).render(<Ord
 | `wasNotified` | function | 이 실패를 서비스가 `notify.error` 로 이미 알렸는가 — 경계의 이중 토스트 방지 |
 | `createAuthClient` | factory | 쿠키 세션 인증(fetchMe/login/logout) — 제네릭 user/자격증명 |
 | `createPermissionStore` · `hasPermission` 외 | store | 권한 스냅샷 store + 판정 free 함수 |
+| `bindSource` · `SourceBinding` | function · Lit controller | 데이터 소스(`@iyulab/flex-table` 의 `createODataSource`·`createArraySource`)를 «뷰 어휘» 를 말하는 요소(표 · 카드 뷰 · 페이저 · 검색 칸)에 묶는다 — 상태를 속성에 쓰고 `sort-change`·`page-change`·`search` 를 소스 조작으로. 상세: `skills/iyulab-enterprise/references/list.md` |
 | `CurrencyHelper` | class | 통화 포맷(`formatKRW` 등) — **deprecated**, `@iyulab/components` 의 `formatCurrency` 를 쓸 것 |
 | `DateHelper` | class | 날짜 포맷·날짜 계산(로컬 달력 — `'YYYY-MM-DD'` 는 그 날로 읽는다) |
 | `ProgressHelper` | class | 진행률 계산 |

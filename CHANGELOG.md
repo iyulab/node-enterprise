@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.27.0] - 2026-10-07
+
+### Added
+
+- **`bindSource(source, element)`** — ties a data source (`createODataSource` / `createArraySource` of
+  `@iyulab/flex-table`, known by its shape — no dependency) to an element that speaks the list view vocabulary:
+  `flex-table`, `u-rich-table`, `u-data-view`, `u-pagination`, a search box. It writes `data`, `totalCount`,
+  `loading`, `error`, `sortCriteria`, `page` and `pageSize` — only the properties the element has and can set, and
+  only when the source value changed — puts an element that has `dataMode` into `'server'`, and turns
+  `sort-change { criteria }`, `page-change { page, pageSize }` and `search { query }` into `setSort`, `setPage` /
+  `setPageSize` and `setSearch`. It returns the unbind function. A list screen is then the same wiring whichever view
+  shows it.
+- **`SourceBinding`** — the Lit adapter: binds the elements a host renders, rebinds when they change, unbinds on
+  disconnect. Structural host type — no `lit` dependency.
+
 ## [0.26.0] - 2026-10-06
 
 ### Changed (breaking)
