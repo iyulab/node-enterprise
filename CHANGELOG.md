@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Documentation
+
+- `bindSource`: the list search box is `u-input type="search"` (`@iyulab/components` 2.17 fires `search { query }`
+  when a search is committed). The reference named `u-select searchable`, whose `search` is the search of its own
+  option list, not of a list.
+
 ## [0.27.0] - 2026-10-07
 
 ### Added

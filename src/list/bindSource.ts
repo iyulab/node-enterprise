@@ -60,7 +60,7 @@ function writable(target: object, key: string): boolean {
  *   바뀐 때만. 그리고 요소에 `dataMode` 가 있으면 `'server'` 로 — 질의(정렬 · 검색 · 페이지)는 소스가 하므로 뷰가 받은 한
  *   페이지를 다시 거르거나 나누면 안 된다.
  * - **듣는다**: `sort-change {criteria}` → `setSort` · `page-change {page, pageSize?}` → `setPage`(크기가 바뀌었으면
- *   `setPageSize` — 첫 장으로) · `search {query}` → `setSearch`(검색 칸 — `u-select searchable` 이 내는 모양).
+ *   `setPageSize` — 첫 장으로) · `search {query}` → `setSearch`(목록 검색 칸 — `u-input type="search"` 가 검색을 확정할 때 내는 모양).
  *
  * 선택(`selection-change`)과 행 열기(`row-activate`)는 묶지 않는다 — 소스의 것이 아니라 화면의 것이라, 뷰에서 직접 듣는다.
  *

@@ -15,7 +15,7 @@ the two:
 | writes | `dataMode = 'server'` (when the element has it) | the source runs the query; the view must not filter or page its one page again |
 | listens | `sort-change { criteria }` | `setSort(criteria)` |
 | listens | `page-change { page, pageSize? }` | `setPage(page)`, or `setPageSize(pageSize)` when the size changed (back to page 0) |
-| listens | `search { query }` | `setSearch(query)` — `u-select searchable` fires this shape |
+| listens | `search { query }` | `setSearch(query)` — a list search box: `u-input type="search"` fires this when a search is committed (Enter, clear, Escape; `@iyulab/components` 2.17) |
 
 It writes only the properties the element has and can set (a card view has no sort; a pager has no `data`), and only
 when the source value changed. It does not bind selection (`selection-change`) or opening a row (`row-activate`) —
