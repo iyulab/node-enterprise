@@ -29,6 +29,7 @@
   "sideEffects": [
     "./src/index.ts",
     "./src/icons.ts",
+    "./src/react.ts",
     "./src/list-page.ts",
     "./src/list/UListPage.ts",
     "./dist/*.js"

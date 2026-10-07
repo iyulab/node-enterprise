@@ -40,6 +40,8 @@ export default defineConfig({
       external: [
         /^@iyulab\//,
         /^lit($|\/)/,
+        // @lit/react 도 바깥이다 — ^lit 은 스코프 이름(@lit/…)에 맞지 않아 ./react 엔트리에 사본이 번들됐다.
+        /^@lit\//,
         /^react($|\/)/,
         /^react-dom($|\/)/,
         // ★선언과 산출물을 일치시킨다. 종전에는 external 이 아니라 `odata-query` 코드가
