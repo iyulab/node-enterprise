@@ -33,6 +33,54 @@ table.addEventListener('row-activate', (e) => openOrder(e.detail.id));
 `bindSource` subscribes to the source, so an OData source starts loading when the first element is bound. The source
 is known by its shape (`ViewSource`) — this package does not depend on `@iyulab/flex-table`.
 
+## The list skeleton: `u-list-page`
+
+```ts
+import '@iyulab/enterprise/list-page'; // registers <u-list-page>
+```
+
+A list screen as slots — header, filters, toolbar, view, pager, empty, error — with a source bound to the view and
+the pager. The skeleton does not draw a table: whatever sits in `slot="view"` does, as long as it speaks the view
+vocabulary above.
+
+```html
+<u-list-page view="table">
+  <u-page-header slot="header" title="Orders"></u-page-header>
+  <u-input slot="filters" type="search" label="Search orders"></u-input>
+  <flex-table slot="view" view-name="table"></flex-table>
+  <u-data-view slot="view" view-name="card"></u-data-view>
+  <u-pagination slot="pager"></u-pagination>
+  <u-empty-state slot="empty" title="No orders"></u-empty-state>
+  <u-empty-state slot="error" variant="error" title="Could not load orders"></u-empty-state>
+</u-list-page>
+```
+
+```ts
+const page = document.querySelector('u-list-page')!;
+page.source = createODataSource<Order>('/api/orders', { pageSize: 20 });
+```
+
+| Part of the screen | How |
+|---|---|
+| Binding | every element in `slot="view"` and `slot="pager"` is bound with `bindSource` — including views added later |
+| Table ↔ cards | give each view a `view-name` and set `view` on the skeleton; the others get `hidden` (the skeleton owns `hidden` on its views). Without `view` the first view shows. Hidden views stay bound, so switching is instant |
+| Search | a `search { query }` from the header, filters or toolbar becomes `setSearch(query)` |
+| Empty and error | `slot="error"` replaces the view and the pager while the source has an error; `slot="empty"` while the result is empty. Leave a slot out and the view shows its own message (both tables draw one) |
+| Status | the `status` attribute is `loading` (first load, no rows yet), `error`, `empty` or `ready` — for CSS and tests |
+| Spacing | `--list-page-gap` (default `var(--u-space-md)`). Regions with nothing in them take no space. Parts: `region` plus `header`, `filters`, `toolbar`, `view`, `pager`, `status` |
+
+Selection and opening a row stay on the view (`selection-change`, `row-activate`) — the skeleton fires no events of
+its own. For a layout the slots do not fit, use `bindSource` alone.
+
+React: `ListPage` from `@iyulab/enterprise/react` (a thin wrapper — `@lit/react` is an optional peer):
+
+```tsx
+<ListPage source={orders} view={view}>
+  <flex-table slot="view" view-name="table" />
+  <u-pagination slot="pager" />
+</ListPage>
+```
+
 ## Lit
 
 `SourceBinding` binds the elements a host renders, rebinds when they change and unbinds when the host disconnects:

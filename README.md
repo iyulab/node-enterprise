@@ -62,6 +62,8 @@ createRoot(document.body.appendChild(document.createElement('div'))).render(<Ord
 |--------|------|------|
 | `FormSection` | React (`/react`) | 제목 + 세로 스택 폼 섹션 |
 | `FormRow` | React (`/react`) | 2컬럼 그리드 폼 행(`full`로 1컬럼) |
+| `u-list-page` | 커스텀 엘리먼트 (`/list-page`) | 목록 화면 골격 — 머리·필터·툴바·뷰·페이저·빈/오류 슬롯, 소스를 뷰·페이저에 묶고 `view` 로 표↔카드 전환. 표는 그리지 않는다. 상세: `skills/iyulab-enterprise/references/list.md` |
+| `ListPage` | React (`/react`) | `u-list-page` 의 얇은 래퍼(`@lit/react` — 선택 peer) |
 | `ApiConfig` | class | baseUrl/OData·API prefix·dev 판별 중앙 설정 |
 | `createODataService` | factory | OData v4 + custom REST CRUD 서비스(401·토스트·에러파싱) |
 | `ApiError` | class | HTTP status + OData `error.details`(필드별 검증 상세)를 실은 API 호출 실패 에러 |

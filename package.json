@@ -28,9 +28,10 @@
   },
   "sideEffects": [
     "./src/index.ts",
-    "./dist/index.js",
     "./src/icons.ts",
-    "./dist/icons.js"
+    "./src/list-page.ts",
+    "./src/list/UListPage.ts",
+    "./dist/*.js"
   ],
   "exports": {
     ".": {
@@ -40,6 +41,10 @@
     "./icons": {
       "types": "./src/icons.d.ts",
       "import": "./src/icons.js"
+    },
+    "./list-page": {
+      "types": "./src/list-page.d.ts",
+      "import": "./src/list-page.js"
     },
     "./react": {
       "types": "./src/react.d.ts",
@@ -51,28 +56,37 @@
     "build": "npm run typecheck && vite build",
     "pretest": "node -e \"if(require('fs').existsSync('../../scripts/sibling-dist-check.js'))require('child_process').execFileSync('node',['../../scripts/sibling-dist-check.js'],{stdio:'inherit'})\"",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:browser": "vitest run --project=browser"
   },
   "dependencies": {
     "@iyulab/http-client": "^0.14.0",
+    "lit": "^3.3.3",
     "odata-query": "^8.1.0"
   },
   "devDependencies": {
     "@iyulab/components": "^2.0.0",
+    "@lit/react": "^1.0.8",
     "@microsoft/api-extractor": "^7.58.8",
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.14",
+    "@vitest/browser-playwright": "^5.0.0",
     "react": "^19.2.7",
+    "react-dom": "^19.2.8",
     "typescript": "^6.0.2",
     "vite": "^8.1.4",
     "vite-plugin-dts": "^5.0.3",
     "vitest": "^5.0.0"
   },
   "peerDependencies": {
-    "react": "^18.0.0 || ^19.0.0",
-    "@iyulab/components": ">=1.44.0"
+    "@iyulab/components": ">=1.44.0",
+    "@lit/react": "^1.0.8",
+    "react": "^18.0.0 || ^19.0.0"
   },
   "peerDependenciesMeta": {
+    "@lit/react": {
+      "optional": true
+    },
     "react": {
       "optional": true
     }

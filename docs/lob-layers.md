@@ -10,7 +10,7 @@
 
 ```
 L3  앱 템플릿    ListPage · MasterDetailPage · DashboardPage        ← 아직 없음
-L2  LOB 패턴     FormSection · FormRow · …                          ← enterprise 가 소유
+L2  LOB 패턴     FormSection · FormRow · u-list-page(+ bindSource)   ← enterprise 가 소유
 L1  컴포넌트     @iyulab/components · flex-table · u-widgets
 L0  토큰         역할 토큰 · 스케일 토큰 (components 가 소유)
 ```
@@ -21,15 +21,17 @@ L0  토큰         역할 토큰 · 스케일 토큰 (components 가 소유)
 
 ### ★ 프레임워크 전제 — 표류시키지 않는다
 
-> **L0·L1 은 프레임워크 중립이다. L2·L3 는 React 를 전제한다.**
+> **L0·L1 은 프레임워크 중립이다. L2 의 골격도 그렇다** — 커스텀 엘리먼트와 프레임워크 중립 소스
+> (`createODataSource`·`createArraySource`) 위에 서고, React 는 얇은 래퍼(`@iyulab/enterprise/react`)다.
 
-L1(`components`)은 Lit 웹 컴포넌트라 어느 프레임워크에서든 쓰인다. 그러나 L2 는 이미
-`.tsx` 이고, LOB 패턴 계층을 여기에 쌓는다는 것은 **이 계층을 React 전용으로 확정한다**는
-뜻이다. 이 문장을 적어 두지 않으면 다른 프레임워크의 소비자가 나타났을 때 **아무도
-결정하지 않은 채 갈라진다** — 이 계층이 막으려는 실패가 정확히 그 형태다.
+이 문장을 적어 두지 않으면 다른 프레임워크의 소비자가 나타났을 때 **아무도 결정하지 않은 채
+갈라진다** — 이 계층이 막으려는 실패가 정확히 그 형태다. 첫 판(2026-08-01)은 그것을 «L2·L3 는 React 를
+전제한다» 로 막았다. 소스·이벤트·오류 어휘가 중립이 된 뒤에는 같은 실패를 «골격도 중립» 으로 막는 것이
+정석이다 — React 전용 골격은 Lit 소비자를 다시 갈라지게 한다.
 
-Lit/Vue 소비자는 **L1 을 직접 쓴다.** L2 를 프레임워크 중립으로 다시 만드는 것은
-이 헌장의 개정 사항이지 구현 과제가 아니다.
+이미 있는 React 패턴(`FormSection`·`FormRow`)은 그대로 둔다 — 이 개정은 새 골격의 형태를 정할 뿐
+기존 패턴을 옮기지 않는다(옮길지는 그 패턴의 소비 실측으로 따로 잰다). L3 템플릿의 형태는 그것이
+승격할 때 정한다.
 
 ---
 
@@ -95,7 +97,7 @@ L2 는 L1 위에 앉으므로 **두 층이 다른 오버라이드 철학을 가�
 | 패턴 | 등급 | 상태 |
 |---|---|---|
 | `FormSection` · `FormRow` | ★★ 실측 | **제공 중** |
-| ListPage 키트(목록 골격) | ★★ 실측 | ⏸ 미착수 — 아래 승격 조건 참조 |
+| ListPage 키트(목록 골격) — `u-list-page` · `bindSource` | ★★ 실측 | **제공 중** — 골격(슬롯 · 소스 묶음)만. 열 정의를 받아 표를 그리는 것은 L3 의 일 |
 | SearchSection(검색·기간·필터) | ★ 실측(부분) | ⏸ 미착수 |
 | DataCard / 카드 목록 | ★ 실측(부분) | ⏸ 미착수 |
 | ~~EmptyState~~ | — | ➡ **`@iyulab/modern-app` 로 이관**(2026-08-03) — 아래 |

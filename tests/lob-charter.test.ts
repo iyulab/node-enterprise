@@ -71,6 +71,18 @@ describe('LOB 계층 헌장 — 문서와 구현의 정합', () => {
   it('프레임워크 전제가 헌장에 명시돼 있다', () => {
     // ★이 문장이 없으면 다른 프레임워크의 소비자가 나타났을 때 아무도 결정하지 않은 채
     // 갈라진다 — 이 계층이 막으려는 실패가 정확히 그 형태다.
-    expect(charter()).toMatch(/L0·L1 은 프레임워크 중립이다\. L2·L3 는 React 를 전제한다/);
+    expect(charter()).toMatch(/L0·L1 은 프레임워크 중립이다\. L2 의 골격도 그렇다/);
+  });
+
+  it('L2 골격(커스텀 엘리먼트)이 헌장대로 선다 — 중립 엔트리 · 얇은 React 래퍼 · 슬롯과 커스텀 속성', () => {
+    // 골격은 `./list-page` 에서 등록되고 루트 엔트리는 요소를 싣지 않는다 — 데이터·인증만 쓰는 앱이 Lit 을 받지 않게.
+    expect(read('src/list-page.ts')).toMatch(/export \{ UListPage \}/);
+    expect(read('src/index.ts')).not.toMatch(/UListPage|list-page/);
+    // React 는 래퍼뿐이다 — 동작은 요소에 있다.
+    expect(read('src/react.ts')).toMatch(/export const ListPage = createComponent\(/);
+    // §2 — 오버라이드 경로는 slot + 선언된 커스텀 속성.
+    const el = read('src/list/UListPage.ts');
+    for (const slot of ['header', 'filters', 'toolbar', 'view', 'pager', 'empty', 'error']) expect(el).toContain(`@slot ${slot}`);
+    expect(el).toMatch(/@cssprop --list-page-gap/);
   });
 });

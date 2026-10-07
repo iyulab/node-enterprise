@@ -2,6 +2,22 @@
 
 ## [0.27.1] - 2026-10-08
 
+### Added
+
+- **`<u-list-page>`** (`@iyulab/enterprise/list-page`) — the list screen as slots: `header`, `filters`, `toolbar`,
+  `view`, `pager`, `empty`, `error`. Elements in `view` and `pager` are bound to `source` with `bindSource`
+  (including ones added later); `view` picks which view shows by its `view-name` and the others get `hidden`; a
+  `search { query }` from the header, filters or toolbar becomes `setSearch`; `slot="error"` and `slot="empty"` replace
+  the view and the pager while the source has an error or an empty result. A `status` attribute (`loading`, `error`,
+  `empty`, `ready`) and `--list-page-gap`. The skeleton draws no table — the element in the slot does.
+- **`ListPage`** in `@iyulab/enterprise/react` — a thin `@lit/react` wrapper (`@lit/react` is an optional peer).
+- `lit` is a dependency (used by `./list-page` only — the root entry still loads no UI).
+
+### Changed
+
+- The layer charter (`docs/lob-layers.md` §1) — L2 skeletons are framework-neutral custom elements with thin React
+  wrappers; the existing React patterns (`FormSection`, `FormRow`) stay as they are.
+
 ### Documentation
 
 - `bindSource`: the list search box is `u-input type="search"` (`@iyulab/components` 2.17 fires `search { query }`

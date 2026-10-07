@@ -115,6 +115,10 @@ an element that speaks the list view vocabulary — `flex-table`, `u-rich-table`
 search box (`u-input type="search"`). It writes `data`, `totalCount`, `loading`, `error`, `sortCriteria`, `page`, `pageSize` (only those the
 element has) and turns `sort-change`, `page-change` and `search` into source calls. `SourceBinding` is the Lit adapter.
 
+`<u-list-page>` (`@iyulab/enterprise/list-page`; React: `ListPage` from `/react`) is the list screen as slots —
+header, filters, toolbar, view, pager, empty, error. It binds its views and pager to `source`, shows the view named by
+`view`, and swaps in the empty or error slot. It draws no table; the view in the slot does.
+
 Details: [references/list.md](./references/list.md).
 
 ## Rules of thumb
@@ -133,7 +137,7 @@ Details: [references/list.md](./references/list.md).
   `onMutated`, `notify`, 401 handling, `fetchRaw`, `ApiError`, `notified`/`wasNotified`,
   OData v4 conformance.
 - [references/auth.md](./references/auth.md) — `createAuthClient`, permission store.
-- [references/list.md](./references/list.md) — `bindSource`, `SourceBinding`: one wiring for table, cards, pager
-  and search.
+- [references/list.md](./references/list.md) — `bindSource`, `SourceBinding`, `u-list-page`: one wiring for table,
+  cards, pager and search, and the list skeleton.
 - [references/forms-and-helpers.md](./references/forms-and-helpers.md) — React form
   layout, `ApiConfig`, domain helpers, `./icons`, where the house values live.
