@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.28.1] - 2026-10-08
+
+### Fixed
+
+- **`0.28.0` was tagged but never published to npm** — the release workflow's type check failed in a standalone
+  install: the React wrapper test imports `react-dom/client`, whose types (`@types/react-dom`) were not declared and
+  had only been present through the workspace. No package code changed; `0.28.1` is the first published release of
+  everything listed under `0.28.0`.
+
 ## [0.28.0] - 2026-10-08
 
 ### Added
