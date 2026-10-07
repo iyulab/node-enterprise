@@ -18,6 +18,16 @@ export const styles = css`
     display: none;
   }
 
+  /* 검색 조건과 동작 줄은 보통 여럿이다(검색 칸 + 상태 고르기 · 단추 몇 개) — 한 줄에 같은 간격으로 놓고, 좁으면 접는다.
+     아래 끝 정렬: 라벨이 있는 칸과 없는 단추가 같은 선에 선다. */
+  [part~='filters'],
+  [part~='toolbar'] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--list-page-gap, var(--u-space-md, 12px));
+  }
+
   [part~='view'] {
     display: flex;
     flex-direction: column;

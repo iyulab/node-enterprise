@@ -263,3 +263,31 @@ describe('u-list-page — 상태와 빈·오류 영역', () => {
     expect(region(page, 'view').hidden).toBe(false);
   });
 });
+
+describe('u-list-page — 영역 배치', () => {
+  it('검색 조건 여럿은 한 줄에 --list-page-gap 간격으로 놓이고, 라벨 없는 단추도 같은 아래 선에 선다', async () => {
+    const page = await mount(`<u-list-page style="--list-page-gap: 10px; width: 800px">
+      <u-input slot="filters" type="search" label="Search"></u-input>
+      <u-input slot="filters" label="Customer"></u-input>
+      <button slot="filters">Reset</button>
+      <button slot="toolbar">A</button><button slot="toolbar">B</button>
+      <fake-view slot="view"></fake-view></u-list-page>`, createSource());
+    const [search, customer, reset] = [...page.querySelectorAll('[slot="filters"]')].map((e) => e.getBoundingClientRect());
+    expect(customer.left - search.right).toBeCloseTo(10, 0);
+    expect(customer.top).toBeCloseTo(search.top, 0);
+    expect(reset.bottom).toBeCloseTo(customer.bottom, 0);
+    const [a, b] = [...page.querySelectorAll('[slot="toolbar"]')].map((e) => e.getBoundingClientRect());
+    expect(b.left - a.right).toBeCloseTo(10, 0);
+  });
+
+  it('좁으면 검색 조건이 다음 줄로 접힌다 — 가로로 넘치지 않는다', async () => {
+    const page = await mount(`<u-list-page style="width: 240px">
+      <u-input slot="filters" label="Search"></u-input>
+      <u-input slot="filters" label="Customer"></u-input>
+      <fake-view slot="view"></fake-view></u-list-page>`, createSource());
+    const filters = region(page, 'filters');
+    expect(filters.scrollWidth).toBeLessThanOrEqual(filters.clientWidth);
+    const [first, second] = [...page.querySelectorAll('[slot="filters"]')].map((e) => e.getBoundingClientRect());
+    expect(second.top).toBeGreaterThan(first.top);
+  });
+});
