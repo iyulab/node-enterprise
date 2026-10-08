@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.4] - 2026-10-08
+
+### Documentation
+
+- The auth guide shows the boot gate of `@iyulab/modern-app` 0.45 taking `fetchMe()`'s answer as is
+  (`me: () => auth.fetchMe()`).
+
 ## [0.28.3] - 2026-10-08
 
 ### Documentation
