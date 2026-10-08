@@ -95,6 +95,13 @@ else showUnavailable(session.error)                            // unknown: do no
 Treating `unknown` as signed out logs everyone out the moment the server briefly returns 503 or
 the device goes offline. Keep the current screen (or an offline view) and retry instead.
 
+`@iyulab/modern-app`'s boot gate takes this answer as is — its `me()` returns the same three
+`status` values:
+
+```ts
+await app.load({ auth: { me: () => auth.fetchMe(), renderLogin, renderUnavailable }, /* … */ })
+```
+
 ### Automatic permission sync
 
 `LogoutResult` is `{ ok: true }` or `{ ok: false, message, error }`. With a cookie session, signing out

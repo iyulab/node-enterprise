@@ -351,6 +351,9 @@ const session = await auth.fetchMe()
 if (session.status === 'anonymous') showLogin()                    // 401 — 로그인 화면
 else if (session.status === 'unknown') showOffline(session.error)  // 답을 못 받음 — 로그인으로 보내지 않는다
 
+// @iyulab/modern-app 의 부팅 게이트는 이 답을 그대로 받는다
+await app.load({ auth: { me: () => auth.fetchMe(), renderLogin, renderUnavailable }, /* … */ })
+
 // 로그아웃도 결과를 본다 — 서버가 세션을 끊지 못했으면(2xx·401 이 아닌 답 · 응답 없음) 쿠키가 살아 있다
 const out = await auth.logout()
 if (out.ok) showLogin()
