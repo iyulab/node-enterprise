@@ -99,7 +99,22 @@ class OrdersPage extends LitElement {
 
 ## React
 
-Bind in an effect against the element refs:
+With `ListPage`, the source comes from the hook — options stay props (a changed `fixedFilter` goes back to page 0), and the
+screen reads the state from the same result:
+
+```tsx
+const orders = useODataSource<Order>('/api/orders', { pageSize: 20, fixedFilter: status ? { Status: status } : undefined });
+
+<ListPage source={orders.source} view={view}>
+  <PageHeader slot="header" title="Orders" subtitle={`${orders.totalCount} orders`} />
+  <URichTableReact slot="view" view-name="table" columns={columns} hidePagination />
+  <UPagination slot="pager" />
+</ListPage>
+```
+
+Leave `data` off the views: the skeleton binds them, and the wrappers pass on only the props given (`@iyulab/data-components` 0.47).
+
+Without the skeleton, bind in an effect against the element refs:
 
 ```tsx
 useEffect(() => {

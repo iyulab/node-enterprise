@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Documentation
+
+- The list skeleton's React example takes its source from `useODataSource(...).source` (`@iyulab/flex-table` 0.64) —
+  options stay props, and the views are left without `data`.
+
 ## [0.28.2] - 2026-10-08
 
 ### Fixed
