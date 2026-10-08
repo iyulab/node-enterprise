@@ -18,10 +18,11 @@ export const styles = css`
     display: none;
   }
 
-  /* 검색 조건과 동작 줄은 보통 여럿이다(검색 칸 + 상태 고르기 · 단추 몇 개) — 한 줄에 같은 간격으로 놓고, 좁으면 접는다.
-     아래 끝 정렬: 라벨이 있는 칸과 없는 단추가 같은 선에 선다. */
-  [part~='filters'],
-  [part~='toolbar'] {
+  /* 검색 조건은 보통 여럿이다(검색 칸 + 상태 고르기) — 한 줄에 같은 간격으로 놓고, 좁으면 접는다.
+     아래 끝 정렬: 라벨이 있는 칸과 없는 단추가 같은 선에 선다.
+     ⚠toolbar 는 블록으로 둔다 — 그 자리의 정석은 폭 전체를 쓰는 동작 줄(u-action-bar)이고, 그것은 inline-size 컨테이너라
+     줄 배치의 항목이 되면 폭이 0 으로 접힌다(실측: React 레퍼런스 앱의 목록). */
+  [part~='filters'] {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;

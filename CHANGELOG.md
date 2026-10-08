@@ -4,10 +4,10 @@
 
 ### Fixed
 
-- **`u-list-page`'s `filters` and `toolbar` regions lay their elements out in a row.** Two search fields, or a field
-  and a button, sat against each other with no space between them. They now share one row with `--list-page-gap`
-  between them, wrap when the page is narrow, and align at the bottom so a labelled field and an unlabelled button
-  stand on the same line.
+- **`u-list-page`'s `filters` region lays its elements out in a row.** Two search fields, or a field and a button, sat
+  against each other with no space between them. They now share one row with `--list-page-gap` between them, wrap when
+  the page is narrow, and align at the bottom so a labelled field and an unlabelled button stand on the same line.
+  `toolbar` stays a block, so an action row there (`u-action-bar`) keeps the full width.
 
 ## [0.28.1] - 2026-10-08
 

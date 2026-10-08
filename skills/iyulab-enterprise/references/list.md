@@ -67,7 +67,7 @@ page.source = createODataSource<Order>('/api/orders', { pageSize: 20 });
 | Search | a `search { query }` from the header, filters or toolbar becomes `setSearch(query)` |
 | Empty and error | `slot="error"` replaces the view and the pager while the source has an error; `slot="empty"` while the result is empty. Leave a slot out and the view shows its own message (both tables draw one) |
 | Status | the `status` attribute is `loading` (first load, no rows yet), `error`, `empty` or `ready` — for CSS and tests |
-| Spacing | `--list-page-gap` (default `var(--u-space-md)`) — between the regions, and between the elements of the `filters` and `toolbar` regions, which sit in a row that wraps when narrow, aligned at the bottom so a labelled field and an unlabelled button share a line. Regions with nothing in them take no space. Parts: `region` plus `header`, `filters`, `toolbar`, `view`, `pager`, `status` |
+| Spacing | `--list-page-gap` (default `var(--u-space-md)`) — between the regions, and between the elements of the `filters` region, which sit in a row that wraps when narrow, aligned at the bottom so a labelled field and an unlabelled button share a line. `toolbar` gives its element the full width — an action row (`u-action-bar`) goes there. Regions with nothing in them take no space. Parts: `region` plus `header`, `filters`, `toolbar`, `view`, `pager`, `status` |
 
 Selection and opening a row stay on the view (`selection-change`, `row-activate`) — the skeleton fires no events of
 its own. For a layout the slots do not fit, use `bindSource` alone.

@@ -270,14 +270,19 @@ describe('u-list-page — 영역 배치', () => {
       <u-input slot="filters" type="search" label="Search"></u-input>
       <u-input slot="filters" label="Customer"></u-input>
       <button slot="filters">Reset</button>
-      <button slot="toolbar">A</button><button slot="toolbar">B</button>
       <fake-view slot="view"></fake-view></u-list-page>`, createSource());
     const [search, customer, reset] = [...page.querySelectorAll('[slot="filters"]')].map((e) => e.getBoundingClientRect());
     expect(customer.left - search.right).toBeCloseTo(10, 0);
     expect(customer.top).toBeCloseTo(search.top, 0);
     expect(reset.bottom).toBeCloseTo(customer.bottom, 0);
-    const [a, b] = [...page.querySelectorAll('[slot="toolbar"]')].map((e) => e.getBoundingClientRect());
-    expect(b.left - a.right).toBeCloseTo(10, 0);
+  });
+
+  it('🔴툴바의 동작 줄은 폭 전체를 쓴다 — inline-size 컨테이너(u-action-bar 의 모양)가 0 으로 접히지 않는다', async () => {
+    const page = await mount(`<u-list-page style="width: 800px">
+      <div slot="toolbar" style="display: flex; container-type: inline-size"><button>New</button></div>
+      <fake-view slot="view"></fake-view></u-list-page>`, createSource());
+    const bar = page.querySelector('[slot="toolbar"]')!.getBoundingClientRect();
+    expect(bar.width).toBeCloseTo(800, 0);
   });
 
   it('좁으면 검색 조건이 다음 줄로 접힌다 — 가로로 넘치지 않는다', async () => {
