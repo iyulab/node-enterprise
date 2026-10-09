@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import dts from 'vite-plugin-dts';
+import stripCssComments from '@iyulab/components/plugins/vite-plugin-strip-css-comments.js';
 import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
 
@@ -53,6 +54,8 @@ export default defineConfig({
     },
   },
   plugins: [
+    // `css` 템플릿 안 주석은 문자열이라 번들러가 지우지 못한다 — 정본 플러그인으로 걷는다(components `plugins/`).
+    stripCssComments(),
     dts({
       include: ['src/**/*'],
       bundleTypes: { invokeOptions: { typescriptCompilerFolder: extractorTypescript } },

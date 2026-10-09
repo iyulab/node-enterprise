@@ -24,6 +24,8 @@
 
 ### Changed
 
+- Comments inside the components' `css` styles are no longer shipped. A tagged template's body is a string, so a
+  consumer's bundler could not remove them; they were design notes, sent to every browser.
 - A non-JSON failure body is no longer dropped: `formatError`'s `body` and the auth client's `extractLoginError` receive
   the text when the response is not JSON (previously `undefined`).
 
