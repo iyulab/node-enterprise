@@ -17,7 +17,7 @@
  */
 import { HttpClient, type HttpResponse, type RequestOptions } from '@iyulab/http-client'
 import buildQuery from 'odata-query'
-import { readErrorEnvelope } from './error-envelope'
+import { parseBody, readErrorEnvelope } from './error-envelope'
 
 /**
  * OData v4 오류 봉투의 `error.details` 항목 — 필드별 검증 실패 상세.
@@ -50,6 +50,18 @@ export function wasNotified(error: unknown): boolean {
   return typeof error === 'object' && error !== null && notifiedFailures.has(error)
 }
 
+/** `ApiError` 의 선택 필드. */
+export interface ApiErrorInit {
+  /** 서버의 거절 코드 — `ApiError.code`. */
+  code?: string
+  /** 검증을 마친 `error.details` 항목 — `ApiError.details`. */
+  details?: ApiErrorDetail[]
+  /** 실패 응답의 본문 — `ApiError.body`. */
+  body?: unknown
+  /** 응답 없이 실패했을 때(네트워크·오프라인) 전송이 던진 예외 — 표준 `Error.cause` 로 실린다. 진단용이다. */
+  cause?: unknown
+}
+
 /**
  * API 호출 실패 에러 — HTTP status 를 실어 호출부가 상태별 분기(예: 404 도메인 문구)를 할 수 있게 한다.
  * `Error` 를 상속하므로 기존 `e instanceof Error`/`e.message` 소비처는 그대로 동작한다.
@@ -63,12 +75,22 @@ export class ApiError extends Error {
   readonly code?: string
   /** OData v4 오류 봉투의 `error.details`(필드별 검증 상세) — 서버 응답에 없거나 파싱 실패면 undefined. */
   readonly details?: ApiErrorDetail[]
-  constructor(message: string, status: number, init: { code?: string; details?: ApiErrorDetail[] } = {}) {
-    super(message)
+  /**
+   * 실패 응답의 본문 — JSON 이면 파싱한 값, 아니면 텍스트. 비었으면 undefined. 거절이 싣는 «충돌의 현재 상태»
+   * (409 의 새 판정, 412 의 현재 표현 등)를 같은 요청을 다시 보내지 않고 읽는 자리다. 모양은 서버 계약이라
+   * `unknown` 이다 — 호출부가 좁힌다. `formatError` 가 받는 `body` 와 같은 값이다.
+   *
+   * 표준 `cause` 처럼 **열거되지 않는다** — 에러를 직렬화(로그 · 원격 보고)해도 본문(서버의 `innererror` 같은 디버깅
+   * 정보 포함)이 따라 나가지 않는다. 읽기는 `err.body` 로 그대로 된다.
+   */
+  declare readonly body?: unknown
+  constructor(message: string, status: number, init: ApiErrorInit = {}) {
+    super(message, init.cause === undefined ? undefined : { cause: init.cause })
     this.name = 'ApiError'
     this.status = status
     this.code = init.code
     this.details = init.details
+    Object.defineProperty(this, 'body', { value: init.body, enumerable: false })
   }
 
   /**
@@ -416,23 +438,18 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   /** OData 응답에서 사용자 친화적 에러 메시지 + 구조화된 필드별 상세를 추출. */
   async function extractErrorInfo(
     res: HttpResponse,
-  ): Promise<{ message: string; code?: string; details?: ApiErrorDetail[] }> {
-    let body: Record<string, unknown> | undefined
-    try {
-      body = await res.json<Record<string, unknown>>()
-    } catch {
-      body = undefined
-    }
+  ): Promise<{ message: string; code?: string; details?: ApiErrorDetail[]; body?: unknown }> {
+    const body = parseBody(await res.text().catch(() => ''))
     // OData 봉투(error.*)와 커스텀 REST 최상위(message·Message·code) 관례를 함께 읽는다 — 인증 클라이언트와 같은 규칙.
     const { rawMessage, code, details } = readErrorEnvelope(body)
 
     if (config.formatError) {
       const m = config.formatError({ status: res.status, statusText: res.statusText, rawMessage, code, details, body })
-      if (m) return { message: m, code, details }
+      if (m) return { message: m, code, details, body }
     }
     // 너무 긴 raw 메시지(서버 내부 스택 등)는 노출하지 않고 친화 메시지로 대체.
-    if (rawMessage && rawMessage.length <= 200) return { message: rawMessage, code, details }
-    return { message: messages.http[res.status] ?? `${messages.requestFailed} (${res.status})`, code, details }
+    if (rawMessage && rawMessage.length <= 200) return { message: rawMessage, code, details, body }
+    return { message: messages.http[res.status] ?? `${messages.requestFailed} (${res.status})`, code, details, body }
   }
 
   /**
@@ -447,8 +464,8 @@ export function createODataService(config: ODataServiceConfig): ODataService {
       config.onUnauthorized?.(401)
       throw new ApiError(messages.sessionExpired, 401)
     }
-    const { message, code, details } = await extractErrorInfo(res)
-    throw new ApiError(message, res.status, { code, details })
+    const { message, code, details, body } = await extractErrorInfo(res)
+    throw new ApiError(message, res.status, { code, details, body })
   }
 
   function collectionUrl(entity: string, params?: Record<string, string>): string {

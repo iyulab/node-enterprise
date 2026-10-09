@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- `ApiError.body` — the failed response's body (parsed JSON, else the text, `undefined` when empty), from both the data
+  service and the auth client. A rejection that carries the conflict's current state (a 409's new verdict, a 412's current
+  representation) can be read without sending the request again. It is the same value `formatError` already received.
+- `ApiError` sets the standard `cause` to the transport's exception when the auth client got no response (`status` 0).
+- `ApiErrorInit` — the type of `ApiError`'s optional constructor fields (`code`, `details`, `body`, `cause`).
+
+### Changed
+
+- A non-JSON failure body is no longer dropped: `formatError`'s `body` and the auth client's `extractLoginError` receive
+  the text when the response is not JSON (previously `undefined`).
+
 ## [0.28.4] - 2026-10-08
 
 ### Documentation

@@ -93,6 +93,13 @@ describe('error response (JSON Format §21)', () => {
     const err = await svc().odataGet('Customers').catch(e => e)
     expect(JSON.stringify(err)).not.toContain('trace')
   })
+
+  it('the raw body stays readable — innererror rides only there, never as an interpreted field', async () => {
+    queue.push(json(specExample, 501))
+    const err = await svc().odataGet('Customers').catch(e => e)
+    expect(err.body).toEqual(specExample)
+    expect(Object.keys(err)).not.toContain('body')
+  })
 })
 
 describe('data modification (Protocol §11.4)', () => {

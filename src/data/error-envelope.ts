@@ -41,3 +41,13 @@ export function readErrorEnvelope(body: unknown): ErrorEnvelope {
     details: extractErrorDetails(errorObj?.details),
   }
 }
+
+/** 실패 응답 본문 텍스트 → JSON 이면 파싱한 값, 아니면 텍스트 그대로, 비었으면 undefined(`ApiError.body` 의 규칙). */
+export function parseBody(text: string): unknown {
+  if (!text) return undefined
+  try {
+    return JSON.parse(text)
+  } catch {
+    return text
+  }
+}

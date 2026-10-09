@@ -291,6 +291,8 @@ try {
 | `status` | HTTP status |
 | `code` | 서버가 정한 거절 코드 — OData `error.code`(봉투가 없으면 최상위 `code`). 같은 상태 안의 실패를 가른다(예: 403 중 «비밀번호 변경 필요»). 없거나 빈 문자열이면 `undefined` |
 | `details` | `error.details` 항목 배열 — 규격상 `code`/`message` 는 필수, `target`(속성 이름)은 선택. 상세가 없거나 규격 형태가 아니면 `undefined` |
+| `body` | 실패 응답의 본문 — JSON 이면 파싱한 값, 아니면 텍스트, 비었으면 `undefined`. 거절이 싣는 «충돌의 현재 상태»(409 의 새 판정, 412 의 현재 표현)를 같은 요청을 다시 보내지 않고 읽는다. 모양은 서버 계약이라 `unknown` — 호출부가 좁힌다. `formatError` 가 받는 `body` 와 같은 값. 표준 `cause` 처럼 열거되지 않는다(직렬화·로그에 실리지 않음) |
+| `cause` | 표준 `Error.cause` — 응답 없이 실패했을 때(인증 클라이언트의 네트워크 오류, `status` 0) 전송이 던진 예외. 진단용 |
 | `notified` | 서비스가 이 실패를 `notify.error` 로 **이미 사용자에게 알렸는가**(읽기 전용). 쓰기 실패를 알렸으면 `true`, 읽기·`*Quiet`·401 이나 `notify.error` 미설정이면 `false` |
 
 #### 경계에서 «알리지 않은 것만» 알리기 — `notified` · `wasNotified`
@@ -323,7 +325,7 @@ window.addEventListener('unhandledrejection', (ev) => {
 | 서버 주도 페이징 — `@odata.nextLink`(상대·절대) | 구현 | `odataGet` 은 끝까지 따라가고, `odataGetPage` 는 `nextLink` 를 준다. 서비스 오리진 밖 · 이미 읽은 링크로의 순환은 던진다 |
 | `nextLink` 를 불투명하게 따라가기(Protocol §11.2.6.7) | 구현 | 서버가 쓴 쿼리가 바이트 그대로 나간다(`@iyulab/http-client` 0.10.3 이상 — 범위 `^0.10.0` 이면 재설치로 받는다) |
 | `$count=true` → `@odata.count` · `odataCount` | 구현 | `odataCount` 는 `$top=0&$count=true` 로 행 없이 건수만 |
-| 오류 봉투 — `error.code`·`message`·`details[]`(`code`·`message`·`target`) | 구현 | `ApiError.message`·`ApiError.code`·`ApiError.details` · `innererror` 는 싣지 않는다(서버의 디버깅용이지 계약이 아니다) |
+| 오류 봉투 — `error.code`·`message`·`details[]`(`code`·`message`·`target`) | 구현 | `ApiError.message`·`ApiError.code`·`ApiError.details` · `innererror` 는 해석하지 않는다(서버의 디버깅용이지 계약이 아니다) — 원문 `body` 에만 있고, `body` 는 열거되지 않아 에러를 직렬화해도 따라 나가지 않는다 |
 | 생성 201 · 수정/삭제 204 No Content | 구현 | 빈 바디를 파싱하지 않는다 |
 | 키 리터럴(URL Conventions §4.3.1) | 호출자 | `id` 는 URL 에 쓰이는 리터럴 그대로다 — GUID·숫자는 그대로, 문자열 키는 호출자가 `'…'` 로 감싸고 `'` 를 `''` 로. 클라이언트는 메타데이터 없이 둘을 가를 수 없다 |
 | 낙관적 동시성 — ETag · `If-Match` · 412 | 미구현 | 서버 지원 확인 뒤에 연다 |

@@ -65,12 +65,12 @@ The client uses plain `fetch`, deliberately bypassing any HTTP interceptors: a 4
 |---|---|---|
 | `'authenticated'` | 2xx with the user | `user` |
 | `'anonymous'` | The server answered **401** | — |
-| `'unknown'` | Any other non-2xx, no response (network/offline), or an unreadable 2xx body | `error: ApiError` (`status` is `0` when there was no response) |
+| `'unknown'` | Any other non-2xx, no response (network/offline), or an unreadable 2xx body | `error: ApiError` (`status` is `0` and `cause` is the transport's exception when there was no response) |
 
 `LoginResult<TUser>` is `{ ok: true, user }` or `{ ok: false, message, error }`. `message` is
 user-facing (`invalidCredentials` for 401, else the server message, else `loginFailed`;
-`networkError` with no response). `error` is an `ApiError` carrying `status`, the server's `code`
-and `details` read from the same error envelope as the data service — branch on them:
+`networkError` with no response). `error` is an `ApiError` carrying `status`, the server's `code`,
+`details` and the response `body` read from the same error envelope as the data service — branch on them:
 
 ```ts
 const result = await auth.login({ Username: name, Password: pw })

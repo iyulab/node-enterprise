@@ -189,6 +189,9 @@ try {
 }
 ```
 
+When the server puts the current representation in the 412 body, `e.body` has it — show "someone else changed
+this" with their values instead of reloading.
+
 The tag is opaque — do not read, compare or compute the row-version field; pass the tag back.
 `odataGetById` copies the `ETag` header into `@odata.etag` when the body has none, so `etagOf`
 is the one way to read it. Without `ifMatch` a write is unconditional, as before.
@@ -219,6 +222,7 @@ Network failures surface as the underlying error, and the paging guards above th
 | `status` | HTTP status |
 | `code` | The server's rejection code — OData `error.code` (top-level `code` when there is no envelope); `undefined` when absent or empty. Branch on it to tell apart failures that share a status |
 | `details` | `ApiErrorDetail[] \| undefined` from OData `error.details` |
+| `body` | The failed response's body — parsed JSON, else the text, `undefined` when empty. Read a rejection's payload (a 409's new verdict, a 412's current representation) without sending the request again; typed `unknown` (the server's contract), so narrow it. Same value `formatError` receives. Not enumerable, like the standard `cause` — serializing the error (logs, remote reporting) does not carry the body |
 | `notified` | Read-only: `true` if the service already showed this failure via `notify.error` |
 
 Each `ApiErrorDetail` has `code` and `message` (required) and `target` (optional property

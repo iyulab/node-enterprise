@@ -24,7 +24,7 @@
  * else if (session.status === 'unknown') showOffline(session.error)  // 모름 — 화면 유지 · 재시도
  */
 import { ApiError } from '../data/ODataService'
-import { readErrorEnvelope } from '../data/error-envelope'
+import { parseBody, readErrorEnvelope } from '../data/error-envelope'
 import { defaultPermissionStore, type PermissionStore } from './permissions'
 
 export interface AuthClientMessages {
@@ -120,13 +120,9 @@ export interface AuthClient<TUser, TCredentials> {
   logout(): Promise<LogoutResult>
 }
 
-/** 본문을 JSON 으로 읽는다 — 비었거나 JSON 이 아니면 undefined. */
-async function readJson(res: Response): Promise<unknown> {
-  try {
-    return await res.json()
-  } catch {
-    return undefined
-  }
+/** 실패 본문을 읽는다 — JSON 이면 파싱한 값, 아니면 텍스트, 비었으면 undefined(`ApiError.body` 의 규칙). */
+async function readBody(res: Response): Promise<unknown> {
+  return parseBody(await res.text().catch(() => ''))
 }
 
 /**
@@ -134,11 +130,11 @@ async function readJson(res: Response): Promise<unknown> {
  * 서버 문장은 200자를 넘으면(내부 스택 등) 쓰지 않는다. 둘 다 없으면 `fallback`.
  */
 async function failureFrom(res: Response, fallback: string, pickMessage?: (body: unknown) => string | undefined): Promise<ApiError> {
-  const body = await readJson(res)
+  const body = await readBody(res)
   const { rawMessage, code, details } = readErrorEnvelope(body)
   const picked = pickMessage ? pickMessage(body) : rawMessage
   const message = (pickMessage ? picked : picked && picked.length <= 200 ? picked : undefined) || fallback
-  return new ApiError(message, res.status, { code, details })
+  return new ApiError(message, res.status, { code, details, body })
 }
 
 export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
@@ -160,8 +156,8 @@ export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
     let res: Response
     try {
       res = await fetch(url(config.meUrl), { credentials })
-    } catch {
-      return { status: 'unknown', error: new ApiError(messages.networkError, 0) }
+    } catch (cause) {
+      return { status: 'unknown', error: new ApiError(messages.networkError, 0, { cause }) }
     }
     if (res.status === 401) {
       syncPermissions(null)
@@ -189,8 +185,8 @@ export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
         credentials,
         body: JSON.stringify(cred),
       })
-    } catch {
-      return { ok: false, message: messages.networkError, error: new ApiError(messages.networkError, 0) }
+    } catch (cause) {
+      return { ok: false, message: messages.networkError, error: new ApiError(messages.networkError, 0, { cause }) }
     }
     if (!res.ok) {
       // 401 은 자격 증명 문구로 고정한다 — 서버 문장(«Unauthorized» 등)보다 사용자에게 맞는 말이다.
@@ -215,8 +211,8 @@ export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
     let res: Response
     try {
       res = await fetch(url(config.logoutUrl), { method: 'POST', credentials })
-    } catch {
-      return { ok: false, message: messages.networkError, error: new ApiError(messages.networkError, 0) }
+    } catch (cause) {
+      return { ok: false, message: messages.networkError, error: new ApiError(messages.networkError, 0, { cause }) }
     }
     if (!res.ok && res.status !== 401) {
       const error = await failureFrom(res, messages.logoutFailed)
