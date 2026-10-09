@@ -31,6 +31,8 @@
 
 ### Documentation
 
+- The list guide spreads `svc.sourceDefaults` (`{ baseUrl, onUnauthorized }`) into the data source, so a list follows
+  the service's base URL and session policy — an expired session goes to sign-in from the list as it does from a write.
 - Examples import `Locale`/`Theme`/`formatCurrency` from their own module in `@iyulab/components`
   (`dist/utilities/…`) — the components barrel registers every component even when one value is taken from it.
 

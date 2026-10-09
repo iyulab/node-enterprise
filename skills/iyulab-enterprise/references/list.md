@@ -97,13 +97,24 @@ class OrdersPage extends LitElement {
 }
 ```
 
+With an `ODataService`, give the source the service's base URL and session policy — `svc.sourceDefaults` is
+`{ baseUrl, onUnauthorized }`, so an expired session goes to sign-in from the list as it does from a write:
+
+```ts
+const orders = createODataSource<Order>('/$data/Orders', { ...svc.sourceDefaults, pageSize: 20 });
+```
+
 ## React
 
 With `ListPage`, the source comes from the hook — options stay props (a changed `fixedFilter` goes back to page 0), and the
 screen reads the state from the same result:
 
 ```tsx
-const orders = useODataSource<Order>('/api/orders', { pageSize: 20, fixedFilter: status ? { Status: status } : undefined });
+const orders = useODataSource<Order>('/api/orders', {
+  ...svc.sourceDefaults, // the service's base URL and 401 policy
+  pageSize: 20,
+  fixedFilter: status ? { Status: status } : undefined,
+});
 
 <ListPage source={orders.source} view={view}>
   <PageHeader slot="header" title="Orders" subtitle={`${orders.totalCount} orders`} />
