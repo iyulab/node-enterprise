@@ -29,6 +29,11 @@
 - A non-JSON failure body is no longer dropped: `formatError`'s `body` and the auth client's `extractLoginError` receive
   the text when the response is not JSON (previously `undefined`).
 
+### Documentation
+
+- Examples import `Locale`/`Theme`/`formatCurrency` from their own module in `@iyulab/components`
+  (`dist/utilities/…`) — the components barrel registers every component even when one value is taken from it.
+
 ## [0.28.4] - 2026-10-08
 
 ### Documentation

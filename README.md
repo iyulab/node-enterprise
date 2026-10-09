@@ -382,7 +382,7 @@ if (hasPermission('orders.write')) { /* 저장 버튼 노출 */ }
 
 ```typescript
 import { DateHelper } from '@iyulab/enterprise'
-import { formatCurrency } from '@iyulab/components'   // 통화·숫자 포맷은 components 의 것
+import { formatCurrency } from '@iyulab/components/dist/utilities/format.js'   // 통화·숫자 포맷은 components 의 것(배럴은 컴포넌트를 전부 등록한다)
 
 DateHelper.formatDate('2026-10-09')   // 그 날(로컬 달력)로 읽는다
 formatCurrency(1234000, 'KRW')        // ₩1,234,000
