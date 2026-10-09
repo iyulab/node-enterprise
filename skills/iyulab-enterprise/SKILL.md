@@ -103,8 +103,8 @@ count, `full` makes one cell). Both accept `className`/`style`, merged after the
   `getUrlWithParams`, `isDevelopment`).
 - `DateHelper`, `ProgressHelper`, `UrgencyHelper` — formatting and deadline/progress logic;
   labels come from the `messages` locale namespace (English and Korean built in).
-- `CurrencyHelper` — **deprecated**; use `formatCurrency`/`formatNumber` from
-  `@iyulab/components`.
+- Currency and number formatting is not here — use `formatCurrency`/`formatNumber` from
+  `@iyulab/components` (`CurrencyHelper` was removed in 0.29.0).
 
 Details: [references/forms-and-helpers.md](./references/forms-and-helpers.md).
 

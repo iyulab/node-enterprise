@@ -137,12 +137,13 @@ const label = UrgencyHelper.formatDaysRemaining(days)
 | `getProgressLabel(progress)` | Localized stage label (`Not started` … `Done`) |
 | `getProgressGradient(progress)` | CSS `linear-gradient` for a bar |
 
-### `CurrencyHelper` (deprecated)
+### Currency — use `@iyulab/components`
 
-`formatCurrency(amount, currency = 'KRW', locale = 'ko-KR')`, `formatKRW`, `formatUSD`,
-`formatEUR`, `formatJPY`, `formatCNY`, `parseCurrency(value)`. Logs a one-time deprecation
-warning. New code should use `formatCurrency`/`formatNumber`/`formatDate` from
-`@iyulab/components`.
+`CurrencyHelper` was removed in 0.29.0. Use `formatCurrency(value, currency)` and `formatNumber`
+from `@iyulab/components` (`@iyulab/components/dist/utilities/format.js`); they do not map
+`null`/`undefined` to `—` — check for a missing value first and use `EMPTY_VALUE_DISPLAY`.
+To read a typed amount back, strip the currency symbol and use `parseNumber` (locale-aware grouping,
+`null` when the text is not a number).
 
 ### Localizing helper labels — `messages`
 

@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Removed
+
+- **Breaking** — `CurrencyHelper`, deprecated since 0.8.2. Migrate:
+  - `CurrencyHelper.formatKRW(x)` → `formatCurrency(x, 'KRW', undefined, 'ko-KR')` from `@iyulab/components`; likewise
+    `formatUSD` (`'USD'`, `'en-US'`) · `formatEUR` (`'EUR'`, `'de-DE'`) · `formatJPY` (`'JPY'`, `'ja-JP'`) · `formatCNY`
+    (`'CNY'`, `'zh-CN'`). Leave the locale out to follow the active `Locale`. The helper capped fractions at 0 for KRW
+    and 2 otherwise; `Intl` already uses each currency's own digits (KRW 0, USD 2).
+  - `CurrencyHelper.formatCurrency(x, currency, locale)` → `formatCurrency(x, currency, undefined, locale)`.
+  - `null`/`undefined` no longer turn into `—` for you: `x == null ? EMPTY_VALUE_DISPLAY : formatCurrency(x, 'KRW')`.
+  - `CurrencyHelper.parseCurrency(text)` → `parseNumber(text.replace(/[^\d.,+\-−]/g, ''))` from
+    `@iyulab/components` — it returns `null` (not `0`) for text that is not a number.
+
 ### Added
 
 - `ApiError.body` — the failed response's body (parsed JSON, else the text, `undefined` when empty), from both the data

@@ -71,7 +71,6 @@ createRoot(document.body.appendChild(document.createElement('div'))).render(<Ord
 | `createAuthClient` | factory | 쿠키 세션 인증(fetchMe/login/logout) — 제네릭 user/자격증명 |
 | `createPermissionStore` · `hasPermission` 외 | store | 권한 스냅샷 store + 판정 free 함수 |
 | `bindSource` · `SourceBinding` | function · Lit controller | 데이터 소스(`@iyulab/flex-table` 의 `createODataSource`·`createArraySource`)를 «뷰 어휘» 를 말하는 요소(표 · 카드 뷰 · 페이저 · 검색 칸)에 묶는다 — 상태를 속성에 쓰고 `sort-change`·`page-change`·`search` 를 소스 조작으로. 상세: `skills/iyulab-enterprise/references/list.md` |
-| `CurrencyHelper` | class | 통화 포맷(`formatKRW` 등) — **deprecated**, `@iyulab/components` 의 `formatCurrency` 를 쓸 것 |
 | `DateHelper` | class | 날짜 포맷·날짜 계산(로컬 달력 — `'YYYY-MM-DD'` 는 그 날로 읽는다) |
 | `ProgressHelper` | class | 진행률 계산 |
 | `UrgencyHelper` | class | 긴급도 계산 |
@@ -382,9 +381,11 @@ if (hasPermission('orders.write')) { /* 저장 버튼 노출 */ }
 ### 도메인 헬퍼
 
 ```typescript
-import { CurrencyHelper, DateHelper } from '@iyulab/enterprise'
+import { DateHelper } from '@iyulab/enterprise'
+import { formatCurrency } from '@iyulab/components'   // 통화·숫자 포맷은 components 의 것
 
-CurrencyHelper.formatKRW(1234000)   // ₩1,234,000 — deprecated: formatCurrency(1234000, 'KRW') from @iyulab/components
+DateHelper.formatDate('2026-10-09')   // 그 날(로컬 달력)로 읽는다
+formatCurrency(1234000, 'KRW')        // ₩1,234,000
 ```
 
 ## Development

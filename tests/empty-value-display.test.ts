@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { CurrencyHelper } from '../src/helpers/CurrencyHelper';
 import { DateHelper } from '../src/helpers/DateHelper';
 import { UrgencyHelper } from '../src/helpers/UrgencyHelper';
 import { ProgressHelper } from '../src/helpers/ProgressHelper';
@@ -17,12 +16,6 @@ describe('빈 값 표기 — null/undefined ≠ 0', () => {
   it('EMPTY_VALUE_DISPLAY는 em dash다(하이픈이 아니다)', () => {
     expect(EMPTY_VALUE_DISPLAY).toBe('—');
     expect(EMPTY_VALUE_DISPLAY).not.toBe('-');
-  });
-
-  it('CurrencyHelper — null/undefined는 em dash, 0은 0으로 표기된다', () => {
-    expect(CurrencyHelper.formatCurrency(null)).toBe(EMPTY_VALUE_DISPLAY);
-    expect(CurrencyHelper.formatCurrency(undefined)).toBe(EMPTY_VALUE_DISPLAY);
-    expect(CurrencyHelper.formatKRW(0)).toBe('₩0');
   });
 
   it('DateHelper — 세 포맷 함수 모두 null/undefined/불가해 문자열에 em dash를 낸다', () => {
