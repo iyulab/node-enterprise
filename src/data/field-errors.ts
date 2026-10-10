@@ -80,6 +80,8 @@ export function clearFieldErrors(root: ParentNode): void {
  * - 사용자가 그 칸을 고치면(`input`·`change`) 그 메시지를 걷는다 — 고친 값을 다시 보내는 것을 막지 않는다.
  * - 다시 부르면 앞서 얹은 메시지를 먼저 걷는다.
  * - 컨트롤로 못 내려간 항목은 `formLevel` 로 돌려준다 — 요약에 싣는다.
+ * - ⚠저장하는 동안 폼을 잠갔다면(`<fieldset disabled>`) **푼 뒤에** 부른다 — 비활성 컨트롤은 제약 검증에서
+ *   빠지므로(플랫폼 규칙) 메시지는 실려도 오류가 보이지 않는다.
  *
  * ```ts
  * try { await svc.odataPatch('Orders', id, draft) }
