@@ -229,15 +229,27 @@ Each `ApiErrorDetail` has `code` and `message` (required) and `target` (optional
 name). Only entries with string `code` and `message` are kept; an empty result becomes
 `undefined`, so `if (e.details)` is reliable.
 
+### Field errors on the form — `applyFieldErrors`
+
 ```ts
+import { applyFieldErrors } from '@iyulab/enterprise'
+
 try {
   await svc.odataPost('Roles', draft)
 } catch (e) {
-  if (e instanceof ApiError && e.details) {
-    for (const d of e.details) if (d.target) markFieldError(d.target, d.message)
-  }
+  const { applied, formLevel } = applyFieldErrors(form, e)
+  // applied: [{ detail, control, message }] — link each to its control in an error summary
+  // formLevel: details with no target, or no control of that name — plain lines in the summary
 }
 ```
+
+`applyFieldErrors(root, error, { message? })` finds the control whose `name` equals each detail's
+`target` inside `root` (native form elements and `@iyulab/components` form controls), calls
+`setCustomValidity(message)` on it, and calls `validate()` on components controls so the error shows.
+Editing that field (`input` / `change`) removes the server message; calling it again removes the earlier
+ones first, as does `clearFieldErrors(root)`. Several details for one target are joined. `message` maps a
+detail to the text shown — e.g. localize `Unconvertible` by `detail.code`. Anything that is not an
+`ApiError` (a network failure) gives an empty result.
 
 ## `notified` / `wasNotified` — avoid double toasts at the boundary
 

@@ -67,6 +67,7 @@ createRoot(document.body.appendChild(document.createElement('div'))).render(<Ord
 | `ApiConfig` | class | baseUrl/OData·API prefix·dev 판별 중앙 설정 |
 | `createODataService` | factory | OData v4 + custom REST CRUD 서비스(401·토스트·에러파싱) |
 | `ApiError` | class | HTTP status + OData `error.details`(필드별 검증 상세)를 실은 API 호출 실패 에러 |
+| `applyFieldErrors` · `clearFieldErrors` | function | 서버 거절의 필드 상세(`ApiError.details` 의 `target`)를 폼 안 그 `name` 의 컨트롤에 — 칸 옆 오류 · 고치면 걷힘 · 못 내려간 항목은 폼 단위로 돌려준다 |
 | `wasNotified` | function | 이 실패를 서비스가 `notify.error` 로 이미 알렸는가 — 경계의 이중 토스트 방지 |
 | `createAuthClient` | factory | 쿠키 세션 인증(fetchMe/login/logout) — 제네릭 user/자격증명 |
 | `createPermissionStore` · `hasPermission` 외 | store | 권한 스냅샷 store + 판정 free 함수 |
@@ -274,15 +275,23 @@ await svc.apiPost('auth/login', creds, { onUnauthorized: false })
 읽어 폼의 필드별 오류 표시에 바로 연결할 수 있다.
 
 ```typescript
+import { applyFieldErrors } from '@iyulab/enterprise'
+
 try {
   await svc.odataPost('Roles', draft)
 } catch (e) {
-  if (e instanceof ApiError && e.details) {
-    // [{ code: 'ValidationError', message: 'The Name field is required.', target: 'Name' }, …]
-    for (const d of e.details) markFieldError(d.target, d.message)
-  }
+  // [{ code: 'ValidationFailed', message: 'The Name field is required.', target: 'Name' }, …]
+  const { applied, formLevel } = applyFieldErrors(form, e)
+  // applied: 칸에 내려간 항목(control · message) — 요약에 칸으로 가는 링크로
+  // formLevel: target 이 없거나 그 이름의 칸이 없는 항목 — 요약에 링크 없는 줄로
 }
 ```
+
+`applyFieldErrors(root, error, { message? })` 는 `target` 과 같은 `name` 의 컨트롤(네이티브 폼 요소 ·
+`@iyulab/components` 폼 컨트롤)에 `setCustomValidity(message)` 를 하고, components 컨트롤이면 `validate()` 로
+오류를 보인다. 사용자가 그 칸을 고치면(`input`·`change`) 그 메시지를 걷고, 다시 부르면 앞의 것을 먼저 걷는다
+(`clearFieldErrors(root)` 로도 걷는다). `message` 로 문장을 바꾼다 — `detail.code` 로 지역화할 때(예: 값을 그
+타입으로 읽지 못한 `Unconvertible` 만 앱의 언어로). `ApiError` 가 아닌 실패는 빈 결과다.
 
 | 필드 | 설명 |
 |------|------|
