@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.30.0] - 2026-10-10
+
+### Added
+
+- `applyFieldErrors(root, error, { message? })` puts a rejection's field details on the form: each
+  `ApiError.details` entry with a `target` sets its message on the control whose `name` is the target — native form
+  elements and `@iyulab/components` form controls, which show the error. Editing that field clears the message, and
+  calling the function again clears the earlier ones first. It returns `{ applied, formLevel }`: the details placed on
+  controls (for an error summary that links to them) and the ones that had no target or no control of that name.
+  `message` maps a detail to the text shown — for example to localize `Unconvertible` by `detail.code`. Call it after
+  unlocking a form that was disabled while saving; a disabled control is barred from validation.
+- `clearFieldErrors(root)` removes the messages `applyFieldErrors` put inside `root`.
+
 ## [0.29.0] - 2026-10-09
 
 ### Removed
