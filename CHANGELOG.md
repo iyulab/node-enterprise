@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **A searchable `u-select` in the `filters` region no longer drives the list search.** `u-select searchable` fires
+  `search { query }` on every keystroke while it narrows its own options; `u-list-page` took that as the list query,
+  so typing to find an option re-queried the list with those letters. The skeleton now ignores `search` from a select
+  (itself or wrapped, e.g. in a `u-field`); a search box's `search` still becomes `setSearch(query)`.
+
 ## [0.32.0] - 2026-10-12
 
 ### Added

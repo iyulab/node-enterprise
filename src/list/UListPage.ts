@@ -9,6 +9,11 @@ export type ListPageStatus = 'loading' | 'error' | 'empty' | 'ready';
 
 /** 소스가 묶이는 영역 — 뷰와 페이저. 나머지 영역(머리 · 필터 · 툴바)은 소스를 받지 않는다. */
 const BOUND_SLOTS = ['view', 'pager'] as const;
+/**
+ * 같은 이름 `search {query}` 를 «목록 검색» 이 아닌 뜻으로 내는 요소 — 그 이벤트는 자기 선택지를 거르는 질의다
+ * (`u-select searchable` 은 글자를 칠 때마다 낸다). 필터 영역에 놓여도 목록 검색어가 되지 않는다.
+ */
+const OPTION_QUERY_EMITTERS = new Set(['u-select']);
 /** 모든 영역 — 채워지지 않은 영역은 상자째 빠진다. */
 const SLOTS = ['header', 'filters', 'toolbar', 'view', 'pager', 'empty', 'error'] as const;
 type SlotName = typeof SLOTS[number];
@@ -23,7 +28,8 @@ type SlotName = typeof SLOTS[number];
  *
  * - **뷰 전환**: 뷰 요소마다 `view-name` 을 주고 골격의 `view` 에 보일 이름을 준다 — 나머지 뷰에는 골격이 `hidden` 을 건다
  *   (뷰 요소의 `hidden` 은 골격이 소유한다). `view` 가 없으면 첫 뷰가 보인다. 숨은 뷰도 소스에 묶인 채라 전환이 즉시다.
- * - **검색**: 머리 · 필터 · 툴바 영역의 요소가 낸 `search {query}` 를 소스의 `setSearch` 로 돌린다.
+ * - **검색**: 머리 · 필터 · 툴바 영역의 요소가 낸 `search {query}` 를 소스의 `setSearch` 로 돌린다. 검색 가능한 선택
+ *   (`u-select searchable`)이 선택지를 거르며 내는 같은 이름의 이벤트는 목록 검색어가 아니다 — 필터에 그대로 둔다.
  * - **빈·오류**: 소스가 오류면 `slot="error"`, 결과가 비면 `slot="empty"` 를 뷰와 페이저 대신 보인다. 그 슬롯이 비어 있으면
  *   뷰가 자기 표시(두 표가 이미 그리는 오류·빈 문구)를 그대로 보인다.
  * - **상태**: 호스트 `status` 속성(`loading` · `error` · `empty` · `ready`) — 소비자 CSS 와 시험이 읽는다.
@@ -181,13 +187,20 @@ export class UListPage extends UElement {
     for (const el of now) if (!this.bound.has(el)) this.bound.set(el, bindSource(source, el));
   }
 
-  /** 머리 · 필터 · 툴바에서 온 `search {query}` → 소스 검색어. 뷰·페이저의 것은 그 묶음이 이미 듣는다. */
+  /**
+   * 머리 · 필터 · 툴바에서 온 `search {query}` → 소스 검색어. 뷰·페이저의 것은 그 묶음이 이미 듣고, 선택지 질의
+   * (`OPTION_QUERY_EMITTERS`)는 목록 검색이 아니다 — 영역의 자식 자신이든 그 안쪽(예: `u-field` 가 감싼 선택)이든.
+   */
   private onSearch = (e: Event) => {
     const source = this.source;
     const query = (e as CustomEvent<{ query?: unknown }>).detail?.query;
     if (!source || typeof query !== 'string') return;
-    const child = e.composedPath().find((n) => n instanceof Element && n.parentElement === this) as Element | undefined;
-    if (!child || this.bound.has(child)) return;
+    const path = e.composedPath();
+    const at = path.findIndex((n) => n instanceof Element && n.parentElement === this);
+    if (at < 0) return;
+    const child = path[at] as Element;
+    if (this.bound.has(child)) return;
+    if (path.slice(0, at + 1).some((n) => n instanceof Element && OPTION_QUERY_EMITTERS.has(n.localName))) return;
     source.setSearch(query);
   };
 }

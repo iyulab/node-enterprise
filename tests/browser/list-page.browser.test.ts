@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import '@iyulab/components/dist/components/pagination/UPagination.js';
 import '@iyulab/components/dist/components/input/UInput.js';
+import '@iyulab/components/dist/components/select/USelect.js';
+import '@iyulab/components/dist/components/option/UOption.js';
 import type { UPagination } from '@iyulab/components/dist/components/pagination/UPagination.js';
 import '../../src/list-page';
 import type { UListPage } from '../../src/list/UListPage';
@@ -14,7 +16,7 @@ import type { ViewSource, ViewSourceState, ViewSortCriterion } from '../../src/l
  * |---|---|
  * | 묶음 | 뷰·페이저가 소스 상태를 받고, 뷰의 `sort-change`·페이저의 `page-change` 가 소스를 조작한다 |
  * | 뷰 전환 | `view` = 보일 뷰의 `view-name` · 없으면 첫 뷰 · 나머지는 `hidden` |
- * | 검색 | 필터 영역의 `search {query}` → `setSearch` 한 번(뷰의 것은 그 묶음이 듣고 골격은 다시 부르지 않는다) |
+ * | 검색 | 필터 영역의 `search {query}` → `setSearch` 한 번(뷰의 것은 그 묶음이 듣고 골격은 다시 부르지 않는다 · 검색 가능한 선택의 선택지 질의는 목록 검색어가 아니다) |
  * | 상태 | `status` = loading · error · empty · ready · 오류/빈 슬롯이 있으면 뷰·페이저 대신 그것 · 없으면 뷰가 그대로 |
  * | 영역 | 채워지지 않은 영역은 상자째 빠진다 · 늦게 온 뷰도 묶인다 · 소스를 바꾸면 새 소스로 다시 묶인다 |
  *
@@ -191,6 +193,36 @@ describe('u-list-page — 검색', () => {
         <u-input slot="filters" type="search" label="Search orders"></u-input>
         <fake-view slot="view"></fake-view>
       </u-list-page>`, src);
+    const input = page.querySelector('u-input')!;
+    await input.updateComplete;
+    await userEvent.click(input.shadowRoot!.querySelector('input')!);
+    await userEvent.keyboard('kim{Enter}');
+    expect(src.calls.search).toEqual(['kim']);
+  });
+
+  it('🔴필터의 검색 가능한 선택(u-select searchable)이 선택지를 거르는 글자는 목록 검색어가 아니다 — 감싼 것도', async () => {
+    const src = createSource();
+    const page = await mount(`
+      <u-list-page>
+        <u-input slot="filters" type="search" label="Search orders"></u-input>
+        <u-select slot="filters" searchable label="Customer">
+          <u-option value="a">Acme</u-option><u-option value="b">Beta</u-option>
+        </u-select>
+        <div slot="filters"><u-select searchable label="Owner"><u-option value="k">Kim</u-option></u-select></div>
+        <fake-view slot="view"></fake-view>
+      </u-list-page>`, src);
+    const selects = [...page.querySelectorAll('u-select')];
+    const heard: string[] = [];
+    for (const select of selects) {
+      await select.updateComplete;
+      select.addEventListener('search', (e) => heard.push((e as CustomEvent<{ query: string }>).detail.query));
+      const box = select.shadowRoot!.querySelector<HTMLInputElement>('.search-input input')!;
+      box.value = 'ac';
+      box.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+    }
+    expect(heard).toEqual(['ac', 'ac']); // 선택은 자기 질의를 그대로 낸다(원격 선택지 검색의 계약)
+    expect(src.calls.search).toEqual([]);
+    // 같은 영역의 목록 검색칸은 그대로 목록 검색어가 된다.
     const input = page.querySelector('u-input')!;
     await input.updateComplete;
     await userEvent.click(input.shadowRoot!.querySelector('input')!);

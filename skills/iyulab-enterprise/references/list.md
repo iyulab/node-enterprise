@@ -64,7 +64,7 @@ page.source = createODataSource<Order>('/api/orders', { pageSize: 20 });
 |---|---|
 | Binding | every element in `slot="view"` and `slot="pager"` is bound with `bindSource` — including views added later |
 | Table ↔ cards | give each view a `view-name` and set `view` on the skeleton; the others get `hidden` (the skeleton owns `hidden` on its views). Without `view` the first view shows. Hidden views stay bound, so switching is instant |
-| Search | a `search { query }` from the header, filters or toolbar becomes `setSearch(query)` |
+| Search | a `search { query }` from the header, filters or toolbar becomes `setSearch(query)`. The same-named event a searchable `u-select` fires while it narrows its own options is not a list search — a searchable select can sit in `filters` |
 | Empty and error | `slot="error"` replaces the view and the pager while the source has an error; `slot="empty"` while the result is empty. Leave a slot out and the view shows its own message (both tables draw one) |
 | Status | the `status` attribute is `loading` (first load, no rows yet), `error`, `empty` or `ready` — for CSS and tests |
 | Spacing | `--list-page-gap` (default `var(--u-space-md)`) — between the regions, and between the elements of the `filters` region, which sit in a row that wraps when narrow, aligned at the bottom so a labelled field and an unlabelled button share a line. `toolbar` gives its element the full width — an action row (`u-action-bar`) goes there. Regions with nothing in them take no space. Parts: `region` plus `header`, `filters`, `toolbar`, `view`, `pager`, `status` |
