@@ -26,7 +26,7 @@ export const svc = createODataService({
 | `notify` | `{ success?, error? }` | — | Toast hooks. Omit for no toasts |
 | `onMutated` | `(mutation) => void` | — | Called once after each successful write |
 | `messages` | `Partial<ODataServiceMessages>` | Locale registry | Override only the keys you set |
-| `serverMessages` | `'always' | 'domain-codes'` | `'always'` | When the server's rejection sentence is shown |
+| `serverMessages` | `'always' \| 'domain-codes'` | `'always'` | When the server's rejection sentence is shown |
 | `formatError` | `(info) => string \| undefined` | — | Custom error message; return `undefined` to fall through |
 
 `messages` keys: `saved`, `updated`, `deleted` (success toasts), `sessionExpired` (401

@@ -32,7 +32,7 @@ export const auth = createAuthClient<User, { Username: string; Password: string 
 | `baseUrl` | `string` | `''` | Prefixed to URLs that start with `/` (empty = same origin) |
 | `credentials` | `RequestCredentials` | `'same-origin'` | `fetch` credentials mode (cookie session) |
 | `messages` | `Partial<AuthClientMessages>` | Locale registry | Override only the keys you set (the rest follow the `messages` locale namespace) |
-| `serverMessages` | `'always' | 'domain-codes'` | `'always'` | When the server's rejection sentence is shown — same as the data service |
+| `serverMessages` | `'always' \| 'domain-codes'` | `'always'` | When the server's rejection sentence is shown — same as the data service |
 | `extractLoginError` | `(body) => string \| undefined` | `body.Message ?? body.message` | Server message for non-401 login failures |
 | `getPermissions` | `(user) => string[]` | — | Enables automatic permission-store sync |
 | `permissionStore` | `PermissionStore` | `defaultPermissionStore` | Store to sync into |
