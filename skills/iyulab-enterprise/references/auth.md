@@ -35,6 +35,7 @@ export const auth = createAuthClient<User, { Username: string; Password: string 
 | `extractLoginError` | `(body) => string \| undefined` | `body.Message ?? body.message` | Server message for non-401 login failures |
 | `getPermissions` | `(user) => string[]` | — | Enables automatic permission-store sync |
 | `permissionStore` | `PermissionStore` | `defaultPermissionStore` | Store to sync into |
+| `loginUser` | `'body' \| 'me'` | `'body'` | Where the session user comes from after a successful login: the login response body, or a fresh `meUrl` request — use `'me'` when the login response is an envelope (`{ Success, User, Token }`) rather than the session user; `user` and `getPermissions` then follow `me`, and a login whose `me` is not authenticated fails |
 
 `messages` keys:
 
@@ -67,7 +68,8 @@ The client uses plain `fetch`, deliberately bypassing any HTTP interceptors: a 4
 | `'anonymous'` | The server answered **401** | — |
 | `'unknown'` | Any other non-2xx, no response (network/offline), or an unreadable 2xx body | `error: ApiError` (`status` is `0` and `cause` is the transport's exception when there was no response) |
 
-`LoginResult<TUser>` is `{ ok: true, user }` or `{ ok: false, message, error }`. `message` is
+`LoginResult<TUser>` is `{ ok: true, user, body }` or `{ ok: false, message, error }` — `body` is the login
+response as received (`unknown` — a token envelope, say). `message` is
 user-facing (`invalidCredentials` for 401, else the server message, else `loginFailed`;
 `networkError` with no response). `error` is an `ApiError` carrying `status`, the server's `code`,
 `details` and the response `body` read from the same error envelope as the data service — branch on them:

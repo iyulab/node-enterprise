@@ -381,6 +381,7 @@ if (hasPermission('orders.write')) { /* 저장 버튼 노출 */ }
 | `credentials` | fetch `credentials` 모드 (기본 `'same-origin'` — 쿠키 세션) |
 | `extractLoginError` | 로그인 실패(non-401) 응답 바디에서 사용자 대면 메시지 추출 오버라이드 (기본: 봉투 `error.message` → `message` → `Message`) |
 | `permissionStore` | 권한 자동 갱신 대상 store (기본 `defaultPermissionStore`) — 격리가 필요하면 `createPermissionStore()`로 별도 store를 만들어 주입 |
+| `loginUser` | 로그인 성공 뒤 세션 사용자를 어디서 얻는가 — `'body'`(기본: 로그인 응답 본문) · `'me'`(`meUrl` 재조회 — 로그인 응답이 `{ Success, User, Token }` 같은 봉투인 서버). `LoginResult` 성공에는 응답 원문 `body` 도 실린다 |
 
 - `fetchMe()` 는 던지지 않고 `{ status: 'authenticated', user }` · `{ status: 'anonymous' }`(401) · `{ status: 'unknown', error }`(그 밖의 비-2xx · 네트워크 · 읽을 수 없는 본문) 중 하나를 준다. 로그인 게이트는 `anonymous` 에서만 연다 — `unknown` 을 미인증으로 읽으면 서버가 잠깐 503 을 낸 순간 모두가 로그인 화면으로 간다. 라이브러리는 리다이렉트하지 않는다.
 - `login()` 실패는 `{ ok: false, message, error }` — `error` 는 `ApiError`(`status` · `code` · `details`, 응답이 없으면 `status: 0`)라 429 · 403 거절 코드 같은 갈래로 화면을 나눌 수 있다.
