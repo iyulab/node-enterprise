@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.31.0] - 2026-10-12
+
+### Added
+
+- **`AuthClientConfig.loginUser`** — `'body'` (default) or `'me'`: where the session user comes from after a
+  successful login. With `'me'` the client asks `meUrl` again, so `LoginResult.user` is the session user and
+  `getPermissions` reads it — for servers whose login response is an envelope (`{ Success, User, Token }`) rather
+  than the session user. A login whose `me` is not authenticated fails. A successful `LoginResult` also carries the
+  login response as `body` (`unknown`).
+
+### Changed
+
+- A failure whose error `code` only names its HTTP status (`Forbidden` for 403, `NotFound` for 404,
+  `MethodNotAllowed`, `Conflict`, `InternalServerError` …) shows the localized `messages.http[status]` (or the auth
+  client's fallback) instead of the server's sentence. Servers that began sending an OData error object for
+  failures that had no body — and for unhandled exceptions — put transport boilerplate where users saw a localized
+  message. A domain code's message (`KeyNotFound`) is still shown, and `formatError` still receives it as `rawMessage`.
+
 ## [0.30.0] - 2026-10-10
 
 ### Added
