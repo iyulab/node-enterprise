@@ -42,6 +42,26 @@ export function readErrorEnvelope(body: unknown): ErrorEnvelope {
   }
 }
 
+/** 상태 코드의 표준 이름(공백 없이) — 거절 코드가 상태를 되풀이할 뿐인지 가르는 데만 쓴다. */
+const STATUS_NAMES: Record<number, string> = {
+  400: 'badrequest', 401: 'unauthorized', 403: 'forbidden', 404: 'notfound', 405: 'methodnotallowed',
+  406: 'notacceptable', 408: 'requesttimeout', 409: 'conflict', 410: 'gone', 412: 'preconditionfailed',
+  413: 'payloadtoolarge', 415: 'unsupportedmediatype', 422: 'unprocessableentity', 428: 'preconditionrequired',
+  429: 'toomanyrequests', 500: 'internalservererror', 501: 'notimplemented', 502: 'badgateway',
+  503: 'serviceunavailable', 504: 'gatewaytimeout',
+}
+
+/**
+ * 거절 코드가 HTTP 상태의 이름을 되풀이할 뿐인가(`Forbidden` · `NotFound` · `Internal_Server_Error` …) — 그러면 그 문장은
+ * 전송 계층의 상투어라 사용자에게 보일 말이 아니다(로캘 문구를 쓴다). 도메인 코드(`KeyNotFound` · `PasswordExpired`)의
+ * 문장은 그대로 보인다. 서버가 본문 없던 실패(401·403·404·405)와 처리 못 한 예외(500)에도 오류 봉투를 싣기 시작하면서
+ * 상태 이름 코드와 영어 문장이 로캘 문구를 밀어냈다.
+ */
+export function isStatusCode(code: string | undefined, status: number): boolean {
+  const name = STATUS_NAMES[status]
+  return !!code && !!name && code.replace(/[\s_-]/g, '').toLowerCase() === name
+}
+
 /** 실패 응답 본문 텍스트 → JSON 이면 파싱한 값, 아니면 텍스트 그대로, 비었으면 undefined(`ApiError.body` 의 규칙). */
 export function parseBody(text: string): unknown {
   if (!text) return undefined

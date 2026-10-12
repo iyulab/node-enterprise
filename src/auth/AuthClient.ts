@@ -24,7 +24,7 @@
  * else if (session.status === 'unknown') showOffline(session.error)  // 모름 — 화면 유지 · 재시도
  */
 import { ApiError } from '../data/ODataService'
-import { parseBody, readErrorEnvelope } from '../data/error-envelope'
+import { isStatusCode, parseBody, readErrorEnvelope } from '../data/error-envelope'
 import { defaultPermissionStore, type PermissionStore } from './permissions'
 
 export interface AuthClientMessages {
@@ -70,7 +70,8 @@ export type SessionState<TUser> =
  * 응답이 없던 실패의 `error.status` 는 `0` 이다.
  */
 export type LoginResult<TUser> =
-  | { ok: true; user: TUser }
+  /** `user` 는 세션 사용자(`loginUser` 가 정한 곳에서) · `body` 는 로그인 응답 본문 그대로(토큰 봉투 등 — 서버 계약이라 `unknown`). */
+  | { ok: true; user: TUser; body: unknown }
   | { ok: false; message: string; error: ApiError }
 
 /**
@@ -109,6 +110,14 @@ export interface AuthClientConfig<TUser> {
   getPermissions?: (user: TUser) => string[]
   /** 권한 자동 갱신 대상 store(기본: `defaultPermissionStore`). */
   permissionStore?: PermissionStore
+  /**
+   * 로그인에 성공한 뒤 세션 사용자를 어디서 얻는가.
+   * - `'body'`(기본): 로그인 응답 본문이 곧 세션 사용자(`me` 와 같은 모양)인 서버.
+   * - `'me'`: 로그인 뒤 `meUrl` 로 다시 묻는다 — 로그인 응답이 봉투(`{ Success, User, Token }`)처럼 세션 사용자 모양이 아닌
+   *   서버. 쿠키 세션에서 세션 사용자의 정본은 `me` 라 `LoginResult.user` 의 타입과 권한(`getPermissions`)이 그것을 따른다.
+   *   그 조회가 «인증됨» 이 아니면 로그인은 실패로 돌아온다(쿠키가 서지 않은 것이다).
+   */
+  loginUser?: 'body' | 'me'
 }
 
 export interface AuthClient<TUser, TCredentials> {
@@ -132,7 +141,8 @@ async function readBody(res: Response): Promise<unknown> {
 async function failureFrom(res: Response, fallback: string, pickMessage?: (body: unknown) => string | undefined): Promise<ApiError> {
   const body = await readBody(res)
   const { rawMessage, code, details } = readErrorEnvelope(body)
-  const picked = pickMessage ? pickMessage(body) : rawMessage
+  // 상태 이름뿐인 코드(`Forbidden` 등)의 문장은 전송 상투어 — 소비자 추출기가 없으면 로캘 문구를 쓴다.
+  const picked = pickMessage ? pickMessage(body) : isStatusCode(code, res.status) ? undefined : rawMessage
   const message = (pickMessage ? picked : picked && picked.length <= 200 ? picked : undefined) || fallback
   return new ApiError(message, res.status, { code, details, body })
 }
@@ -196,15 +206,21 @@ export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
           : await failureFrom(res, messages.loginFailed, config.extractLoginError)
       return { ok: false, message: error.message, error }
     }
-    let user: TUser
-    try {
-      user = (await res.json()) as TUser
-    } catch {
-      const error = new ApiError(messages.invalidResponse, res.status)
+    const body = parseBody(await res.text().catch(() => ''))
+    if (config.loginUser === 'me') {
+      // 세션 사용자의 정본은 `me` — 권한도 그 조회가 갱신한다.
+      const session = await fetchMe()
+      if (session.status === 'authenticated') return { ok: true, user: session.user, body }
+      const error = session.status === 'unknown' ? session.error : new ApiError(messages.invalidResponse, res.status, { body })
       return { ok: false, message: error.message, error }
     }
+    if (typeof body !== 'object' || body === null) {
+      const error = new ApiError(messages.invalidResponse, res.status, { body })
+      return { ok: false, message: error.message, error }
+    }
+    const user = body as TUser
     syncPermissions(user)
-    return { ok: true, user }
+    return { ok: true, user, body }
   }
 
   async function logout(): Promise<LogoutResult> {

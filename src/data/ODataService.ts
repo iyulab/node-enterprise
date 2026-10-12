@@ -17,7 +17,7 @@
  */
 import { HttpClient, type HttpResponse, type RequestOptions } from '@iyulab/http-client'
 import buildQuery from 'odata-query'
-import { parseBody, readErrorEnvelope } from './error-envelope'
+import { isStatusCode, parseBody, readErrorEnvelope } from './error-envelope'
 
 /**
  * OData v4 오류 봉투의 `error.details` 항목 — 필드별 검증 실패 상세.
@@ -447,8 +447,8 @@ export function createODataService(config: ODataServiceConfig): ODataService {
       const m = config.formatError({ status: res.status, statusText: res.statusText, rawMessage, code, details, body })
       if (m) return { message: m, code, details, body }
     }
-    // 너무 긴 raw 메시지(서버 내부 스택 등)는 노출하지 않고 친화 메시지로 대체.
-    if (rawMessage && rawMessage.length <= 200) return { message: rawMessage, code, details, body }
+    // 너무 긴 raw 메시지(서버 내부 스택 등)와 상태 이름뿐인 코드의 상투 문장은 노출하지 않고 친화 메시지로 대체.
+    if (rawMessage && rawMessage.length <= 200 && !isStatusCode(code, res.status)) return { message: rawMessage, code, details, body }
     return { message: messages.http[res.status] ?? `${messages.requestFailed} (${res.status})`, code, details, body }
   }
 

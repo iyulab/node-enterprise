@@ -35,7 +35,10 @@ error message), `requestFailed` (fallback), `http` (status → message map; defa
 `formatError` receives `{ status, statusText, rawMessage?, code?, details?, body? }`.
 Message resolution order: `formatError` result → server message (if ≤ 200 chars) →
 `messages.http[status]` → `` `${requestFailed} (${status})` ``. The server message is read
-from `error.message`, then top-level `message`, then `Message`.
+from `error.message`, then top-level `message`, then `Message`. A server message whose `code` only names the
+HTTP status (`Forbidden` for 403, `NotFound` for 404, `InternalServerError` for 500 …) is transport boilerplate and
+is skipped for `messages.http[status]`; a domain code's message (`KeyNotFound`) is shown. `formatError` still
+receives it as `rawMessage`.
 
 ## URLs
 
