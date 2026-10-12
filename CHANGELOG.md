@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- 🔴**The server's rejection sentence is shown again by default** (reverts the 0.31.0 rule). In OData JSON the
+  `code` is a language-independent identifier and the `message` is the human-readable sentence, so a category code with
+  a specific sentence — `{ "code": "Forbidden", "message": "'orders.read' permission is required." }` — is shown as is.
+  A new `serverMessages` option on `createODataService` and `createAuthClient` brings back the 0.31.0 behavior:
+  `'domain-codes'` treats a sentence whose `code` only names the HTTP status as framework boilerplate and shows the
+  localized message instead. **Migration**: if your server sends its framework's default English envelope for
+  failures that used to have no body, set `serverMessages: 'domain-codes'`.
+- The data service's and auth client's built-in messages (toasts, `messages.http`, fallbacks) now come from the
+  package's `messages` locale namespace, with English and Korean built in, and are read when used — `Locale.set()`
+  switches them like the helpers' labels. Keys you pass in `messages` still win. Under a Korean locale an app that
+  passed no `messages` now sees Korean text where it saw English.
+
 ## [0.31.0] - 2026-10-12
 
 ### Added

@@ -25,20 +25,26 @@ export const svc = createODataService({
 | `onUnauthorized` | `(status) => void` | — | Called on 401. Redirects and re-entry guards are the app's job |
 | `notify` | `{ success?, error? }` | — | Toast hooks. Omit for no toasts |
 | `onMutated` | `(mutation) => void` | — | Called once after each successful write |
-| `messages` | `Partial<ODataServiceMessages>` | English | Override only the keys you set |
+| `messages` | `Partial<ODataServiceMessages>` | Locale registry | Override only the keys you set |
+| `serverMessages` | `'always' | 'domain-codes'` | `'always'` | When the server's rejection sentence is shown |
 | `formatError` | `(info) => string \| undefined` | — | Custom error message; return `undefined` to fall through |
 
 `messages` keys: `saved`, `updated`, `deleted` (success toasts), `sessionExpired` (401
 error message), `requestFailed` (fallback), `http` (status → message map; defaults for
-400, 403, 404, 409, 500; your entries are merged in).
+400, 403, 404, 409, 412, 500; your entries are merged in). Keys you leave out come from the package's
+`messages` locale namespace (English and Korean built in), read when the message is used — so `Locale.set()`
+after creating the service still applies.
 
 `formatError` receives `{ status, statusText, rawMessage?, code?, details?, body? }`.
 Message resolution order: `formatError` result → server message (if ≤ 200 chars) →
 `messages.http[status]` → `` `${requestFailed} (${status})` ``. The server message is read
-from `error.message`, then top-level `message`, then `Message`. A server message whose `code` only names the
-HTTP status (`Forbidden` for 403, `NotFound` for 404, `InternalServerError` for 500 …) is transport boilerplate and
-is skipped for `messages.http[status]`; a domain code's message (`KeyNotFound`) is shown. `formatError` still
-receives it as `rawMessage`.
+from `error.message`, then top-level `message`, then `Message`. By default (`serverMessages: 'always'`) it is shown
+— in OData JSON the `code` is a language-independent identifier and the `message` is the human-readable sentence, so a
+category code (`Forbidden`) with a specific sentence is the expected shape. With `'domain-codes'`, a message whose
+`code` only names the HTTP status (`Forbidden` for 403, `NotFound` for 404, `InternalServerError` for 500 …) is treated
+as framework boilerplate and skipped for `messages.http[status]`; a domain code's message (`KeyNotFound`) is still
+shown. Choose it when the server sends its framework's default English envelope for failures. `formatError` always
+receives the sentence as `rawMessage`.
 
 ## URLs
 
@@ -179,7 +185,7 @@ async function pick(x: number, y: number) {
 A server that declares a concurrency token returns `@odata.etag` on every entity (and an `ETag`
 header on a single-entity GET) and honours `If-Match`. Read the tag with `etagOf(entity)` and send
 it back with the write; if someone changed the record in between, the server answers 412 and the
-service throws `ApiError(messages.http[412], 412)` (notified like any write failure).
+service throws `ApiError(…, 412)` — the server's sentence, or `messages.http[412]` without one — (notified like any write failure).
 
 ```ts
 import { etagOf, ApiError } from '@iyulab/enterprise'

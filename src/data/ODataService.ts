@@ -17,7 +17,8 @@
  */
 import { HttpClient, type HttpResponse, type RequestOptions } from '@iyulab/http-client'
 import buildQuery from 'odata-query'
-import { isStatusCode, parseBody, readErrorEnvelope } from './error-envelope'
+import { parseBody, readErrorEnvelope, showsServerMessage } from './error-envelope'
+import { messages as registry, type EnterpriseMessageKey } from '../helpers/messages'
 
 /**
  * OData v4 오류 봉투의 `error.details` 항목 — 필드별 검증 실패 상세.
@@ -102,7 +103,10 @@ export class ApiError extends Error {
   }
 }
 
-/** 서비스가 토스트/에러에 쓰는 사용자 대면 문구. 기본값은 영어 — 앱이 로케일별로 오버라이드한다. */
+/**
+ * 서비스가 토스트/에러에 쓰는 사용자 대면 문구. 설정에서 주지 않은 문구는 패키지 로캘 레지스트리(`messages` —
+ * 영어 · 한국어 내장, `Locale.set()` 을 따른다)에서 그때그때 읽는다.
+ */
 export interface ODataServiceMessages {
   /** POST 성공 토스트 */
   saved: string
@@ -114,24 +118,26 @@ export interface ODataServiceMessages {
   sessionExpired: string
   /** status별 매핑이 없을 때의 폴백 */
   requestFailed: string
-  /** 서버 raw 메시지가 없거나 너무 길 때 status → 친화 메시지 */
+  /** 서버 문장을 보이지 않을 때(없음 · 200자 초과 · `serverMessages` 정책) status → 친화 메시지 */
   http: Record<number, string>
 }
 
-const DEFAULT_MESSAGES: ODataServiceMessages = {
-  saved: 'Saved',
-  updated: 'Updated',
-  deleted: 'Deleted',
-  sessionExpired: 'Your session has expired. Please sign in again.',
-  requestFailed: 'Request failed',
-  http: {
-    400: 'Bad request',
-    403: 'Forbidden',
-    404: 'Not found',
-    409: 'Conflict',
-    412: 'Someone else changed this record. Reload it and try again.',
-    500: 'Server error',
-  },
+/**
+ * 서버가 준 거절 문장(`error.message`)을 사용자에게 보이는 규칙.
+ * - `'always'`(기본): 보인다 — OData JSON Format §21.2 에서 `code` 는 언어 독립 식별자, `message` 는 사람이 읽는 문장이다.
+ *   범주 코드(`Forbidden`)에 구체 문장(«'maintenance.read' 권한이 필요합니다.»)을 싣는 서버가 정석이다.
+ * - `'domain-codes'`: 거절 코드가 HTTP 상태 이름을 되풀이할 뿐이면(`Forbidden` · `NotFound` · `InternalServerError` …)
+ *   그 문장은 프레임워크 상투어로 보고 로캘 문구(`messages.http`)를 쓴다. 도메인 코드(`KeyNotFound`)의 문장은 보인다.
+ *   본문 없던 실패에 영어 기본 봉투를 싣는 서버를 그대로 쓰는 앱이 고른다.
+ *
+ * 어느 쪽이든 200자를 넘는 문장(내부 스택 등)은 보이지 않고, `code` · `body` 는 `ApiError` 에 실린다.
+ */
+export type ServerMessages = 'always' | 'domain-codes'
+
+/** 레지스트리 문구 — 등록되지 않은 키면 undefined(`text()` 는 키를 그대로 돌려준다). */
+function registryText(key: EnterpriseMessageKey): string | undefined {
+  const v = registry.text(key)
+  return v === key ? undefined : v
 }
 
 /**
@@ -164,7 +170,7 @@ export interface ODataRequestOptions {
   /**
    * 조건부 쓰기 — `If-Match` 헤더로 보낼 ETag. 읽을 때 받은 값(`etagOf(entity)`)을 그대로 넘긴다.
    * 그 사이 다른 사람이 레코드를 바꿨으면 서버가 412 로 거절하고, 서비스는
-   * `ApiError(…, 412)` 를 던진다(`messages.http[412]`). 값을 계산하거나 비교하지 말 것 — 불투명하다.
+   * `ApiError(…, 412)` 를 던진다(서버 문장이 없으면 `messages.http[412]`). 값을 계산하거나 비교하지 말 것 — 불투명하다.
    */
   ifMatch?: string
   /**
@@ -247,8 +253,13 @@ export interface ODataServiceConfig {
    * 부르지 않는다. 이 콜백이 던져도 쓰기의 결과는 바뀌지 않는다(예외는 `reportError` 로 보고).
    */
   onMutated?: (mutation: ODataMutation) => void
-  /** 사용자 대면 문구 오버라이드(로케일). 지정한 키만 기본값을 대체한다. */
+  /**
+   * 사용자 대면 문구. 지정한 키만 쓰고, 나머지는 패키지 로캘 레지스트리(`messages`)를 따른다 — `http` 도 상태별로
+   * 섞인다(`{ http: { 403: '…' } }` 는 403 만 바꾼다).
+   */
   messages?: Partial<ODataServiceMessages>
+  /** 서버 거절 문장을 보이는 규칙(기본 `'always'`). `ServerMessages` 참조. */
+  serverMessages?: ServerMessages
   /**
    * 에러 메시지 포매팅 오버라이드. 반환값이 있으면 그것을 에러 메시지로 사용한다.
    * (앱별 정책 — 예: 영문 raw OData 메시지를 로케일 친화 문구로 치환 — 을 여기에 둔다.)
@@ -379,10 +390,16 @@ export function createODataService(config: ODataServiceConfig): ODataService {
   const baseUrl = config.baseUrl
   const odataPrefix = config.odataPrefix ?? '$data'
   const apiPrefix = config.apiPrefix ?? 'api'
-  const messages: ODataServiceMessages = {
-    ...DEFAULT_MESSAGES,
-    ...config.messages,
-    http: { ...DEFAULT_MESSAGES.http, ...config.messages?.http },
+  // 문구는 쓸 때 읽는다 — 서비스를 만든 뒤의 `Locale.set()` 도 따른다.
+  const own = config.messages
+  const messages = {
+    get saved() { return own?.saved ?? registry.text('saved') },
+    get updated() { return own?.updated ?? registry.text('updated') },
+    get deleted() { return own?.deleted ?? registry.text('deleted') },
+    get sessionExpired() { return own?.sessionExpired ?? registry.text('sessionExpired') },
+    get requestFailed() { return own?.requestFailed ?? registry.text('requestFailed') },
+    httpText: (status: number): string | undefined =>
+      own?.http?.[status] ?? registryText(`http${status}` as EnterpriseMessageKey),
   }
   const notifySuccess = config.notify?.success
   const notifyError = config.notify?.error
@@ -447,9 +464,9 @@ export function createODataService(config: ODataServiceConfig): ODataService {
       const m = config.formatError({ status: res.status, statusText: res.statusText, rawMessage, code, details, body })
       if (m) return { message: m, code, details, body }
     }
-    // 너무 긴 raw 메시지(서버 내부 스택 등)와 상태 이름뿐인 코드의 상투 문장은 노출하지 않고 친화 메시지로 대체.
-    if (rawMessage && rawMessage.length <= 200 && !isStatusCode(code, res.status)) return { message: rawMessage, code, details, body }
-    return { message: messages.http[res.status] ?? `${messages.requestFailed} (${res.status})`, code, details, body }
+    // 서버 문장이 없거나 너무 길면(내부 스택 등) · 정책이 상투어로 보면 친화 메시지로 대체.
+    if (showsServerMessage(rawMessage, code, res.status, config.serverMessages)) return { message: rawMessage, code, details, body }
+    return { message: messages.httpText(res.status) ?? `${messages.requestFailed} (${res.status})`, code, details, body }
   }
 
   /**

@@ -26,7 +26,13 @@ export type EnterpriseMessageKey =
   | 'progressNotStarted' | 'progressEarly' | 'progressInProgress'
   | 'progressPastMid' | 'progressAlmost' | 'progressDone'
   | 'urgencyOverdue' | 'urgencyCritical' | 'urgencyUrgent' | 'urgencySoon' | 'urgencyNormal'
-  | 'daysOverdue' | 'daysToday' | 'daysRemaining';
+  | 'daysOverdue' | 'daysToday' | 'daysRemaining'
+  // 데이터 서비스(`createODataService`) — 설정 `messages` 가 주지 않은 문구
+  | 'saved' | 'updated' | 'deleted' | 'sessionExpired' | 'requestFailed'
+  | 'http400' | 'http403' | 'http404' | 'http409' | 'http412' | 'http500'
+  // 인증 클라이언트(`createAuthClient`) — 설정 `messages` 가 주지 않은 문구
+  | 'authInvalidCredentials' | 'authLoginFailed' | 'authSessionCheckFailed' | 'authLogoutFailed'
+  | 'authNetworkError' | 'authInvalidResponse';
 
 /** 이 패키지의 문자열 묶음. 소비자는 `messages.register(locale, table)` 로 덮거나 언어를 더한다. */
 export const messages = Locale.namespace<EnterpriseMessageKey>('@iyulab/enterprise');
@@ -48,6 +54,25 @@ messages.register('en', {
   daysOverdue: '{days} days overdue',
   daysToday: 'Today',
   daysRemaining: '{days} days left',
+
+  saved: 'Saved',
+  updated: 'Updated',
+  deleted: 'Deleted',
+  sessionExpired: 'Your session has expired. Please sign in again.',
+  requestFailed: 'Request failed',
+  http400: 'Bad request',
+  http403: 'Forbidden',
+  http404: 'Not found',
+  http409: 'Conflict',
+  http412: 'Someone else changed this record. Reload it and try again.',
+  http500: 'Server error',
+
+  authInvalidCredentials: 'Invalid username or password.',
+  authLoginFailed: 'Login failed.',
+  authSessionCheckFailed: 'Could not verify the session.',
+  authLogoutFailed: 'Could not sign out.',
+  authNetworkError: 'A network error occurred.',
+  authInvalidResponse: 'The server returned an unreadable response.',
 });
 
 messages.register('ko', {
@@ -67,4 +92,23 @@ messages.register('ko', {
   daysOverdue: '{days}일 지연',
   daysToday: '오늘',
   daysRemaining: '{days}일',
+
+  saved: '저장했습니다',
+  updated: '수정했습니다',
+  deleted: '삭제했습니다',
+  sessionExpired: '세션이 만료되었습니다. 다시 로그인하세요.',
+  requestFailed: '요청이 실패했습니다.',
+  http400: '요청이 올바르지 않습니다.',
+  http403: '권한이 없습니다.',
+  http404: '찾을 수 없습니다.',
+  http409: '다른 변경과 충돌했습니다.',
+  http412: '다른 사람이 이 항목을 바꿨습니다. 다시 불러온 뒤 시도하세요.',
+  http500: '서버 오류가 발생했습니다.',
+
+  authInvalidCredentials: '아이디 또는 비밀번호가 올바르지 않습니다.',
+  authLoginFailed: '로그인하지 못했습니다.',
+  authSessionCheckFailed: '세션을 확인하지 못했습니다.',
+  authLogoutFailed: '로그아웃하지 못했습니다.',
+  authNetworkError: '네트워크 오류가 발생했습니다.',
+  authInvalidResponse: '서버 응답을 읽을 수 없습니다.',
 });

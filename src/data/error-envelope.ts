@@ -3,7 +3,7 @@
  * 최상위 관례(`message`·`Message`·`code`)를 한 규칙으로 읽는다. 데이터 서비스와 인증 클라이언트가 같은
  * 본문에서 같은 `ApiError` 필드를 얻게 하려는 내부 모듈이다(패키지 엔트리로 내보내지 않는다).
  */
-import type { ApiErrorDetail } from './ODataService'
+import type { ApiErrorDetail, ServerMessages } from './ODataService'
 
 export interface ErrorEnvelope {
   /** 서버가 준 문장 — 봉투 `error.message` → 최상위 `message` → `Message` 순. */
@@ -70,4 +70,15 @@ export function parseBody(text: string): unknown {
   } catch {
     return text
   }
+}
+
+/** 서버 문장을 보일 것인가 — 데이터 서비스와 인증 클라이언트가 같은 규칙을 쓴다. */
+export function showsServerMessage(
+  rawMessage: string | undefined,
+  code: string | undefined,
+  status: number,
+  policy: ServerMessages = 'always',
+): rawMessage is string {
+  if (!rawMessage || rawMessage.length > 200) return false
+  return policy === 'always' || !isStatusCode(code, status)
 }

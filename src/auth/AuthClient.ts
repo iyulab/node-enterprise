@@ -23,8 +23,9 @@
  * if (session.status === 'anonymous') showLogin()          // 미인증 — 로그인 게이트
  * else if (session.status === 'unknown') showOffline(session.error)  // 모름 — 화면 유지 · 재시도
  */
-import { ApiError } from '../data/ODataService'
-import { isStatusCode, parseBody, readErrorEnvelope } from '../data/error-envelope'
+import { ApiError, type ServerMessages } from '../data/ODataService'
+import { parseBody, readErrorEnvelope, showsServerMessage } from '../data/error-envelope'
+import { messages as registry } from '../helpers/messages'
 import { defaultPermissionStore, type PermissionStore } from './permissions'
 
 export interface AuthClientMessages {
@@ -40,15 +41,6 @@ export interface AuthClientMessages {
   networkError: string
   /** 2xx 응답의 본문을 읽지 못함 */
   invalidResponse: string
-}
-
-const DEFAULT_AUTH_MESSAGES: AuthClientMessages = {
-  invalidCredentials: 'Invalid username or password.',
-  loginFailed: 'Login failed.',
-  sessionCheckFailed: 'Could not verify the session.',
-  logoutFailed: 'Could not sign out.',
-  networkError: 'A network error occurred.',
-  invalidResponse: 'The server returned an unreadable response.',
 }
 
 /**
@@ -96,8 +88,14 @@ export interface AuthClientConfig<TUser> {
   baseUrl?: string
   /** fetch credentials 모드(기본 'same-origin' — 쿠키 세션). */
   credentials?: RequestCredentials
-  /** 사용자 대면 문구(로케일). 기본 영어. */
+  /** 사용자 대면 문구. 지정한 키만 쓰고, 나머지는 패키지 로캘 레지스트리(`messages` — 영어 · 한국어 내장)를 따른다. */
   messages?: Partial<AuthClientMessages>
+  /**
+   * 서버 거절 문장을 보이는 규칙(기본 `'always'`) — 데이터 서비스의 같은 설정과 같은 뜻이다(`ServerMessages`).
+   * `'domain-codes'` 면 상태 이름뿐인 코드(`Forbidden` 등)의 문장 대신 각 동작의 로캘 문구를 쓴다.
+   * `extractLoginError` 를 주면 로그인 실패 문장은 그것이 정한다.
+   */
+  serverMessages?: ServerMessages
   /**
    * 로그인 실패(non-401) 응답 바디에서 사용자 대면 메시지 추출. 기본: OData 봉투 `error.message` →
    * `message` → `Message`. `error.code`·`error.details` 는 이 함수와 무관하게 `LoginResult.error` 에 실린다.
@@ -135,22 +133,37 @@ async function readBody(res: Response): Promise<unknown> {
 }
 
 /**
- * 실패 응답을 `ApiError` 로. 메시지는 `pickMessage`(소비자 추출기)가 있으면 그 결과, 없으면 서버 문장 —
- * 서버 문장은 200자를 넘으면(내부 스택 등) 쓰지 않는다. 둘 다 없으면 `fallback`.
+ * 실패 응답을 `ApiError` 로. 메시지는 `pickMessage`(소비자 추출기)가 있으면 그 결과, 없으면 서버 문장(`policy` —
+ * 200자를 넘으면 쓰지 않는다). 둘 다 없으면 `fallback`.
  */
-async function failureFrom(res: Response, fallback: string, pickMessage?: (body: unknown) => string | undefined): Promise<ApiError> {
+async function failureFrom(
+  res: Response,
+  fallback: string,
+  policy: ServerMessages | undefined,
+  pickMessage?: (body: unknown) => string | undefined,
+): Promise<ApiError> {
   const body = await readBody(res)
   const { rawMessage, code, details } = readErrorEnvelope(body)
-  // 상태 이름뿐인 코드(`Forbidden` 등)의 문장은 전송 상투어 — 소비자 추출기가 없으면 로캘 문구를 쓴다.
-  const picked = pickMessage ? pickMessage(body) : isStatusCode(code, res.status) ? undefined : rawMessage
-  const message = (pickMessage ? picked : picked && picked.length <= 200 ? picked : undefined) || fallback
-  return new ApiError(message, res.status, { code, details, body })
+  const picked = pickMessage
+    ? pickMessage(body)
+    : showsServerMessage(rawMessage, code, res.status, policy) ? rawMessage : undefined
+  return new ApiError(picked || fallback, res.status, { code, details, body })
 }
 
 export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
   config: AuthClientConfig<TUser>,
 ): AuthClient<TUser, TCredentials> {
-  const messages: AuthClientMessages = { ...DEFAULT_AUTH_MESSAGES, ...config.messages }
+  // 문구는 쓸 때 읽는다 — 클라이언트를 만든 뒤의 `Locale.set()` 도 따른다.
+  const own = config.messages
+  const messages: AuthClientMessages = {
+    get invalidCredentials() { return own?.invalidCredentials ?? registry.text('authInvalidCredentials') },
+    get loginFailed() { return own?.loginFailed ?? registry.text('authLoginFailed') },
+    get sessionCheckFailed() { return own?.sessionCheckFailed ?? registry.text('authSessionCheckFailed') },
+    get logoutFailed() { return own?.logoutFailed ?? registry.text('authLogoutFailed') },
+    get networkError() { return own?.networkError ?? registry.text('authNetworkError') },
+    get invalidResponse() { return own?.invalidResponse ?? registry.text('authInvalidResponse') },
+  }
+  const policy = config.serverMessages
   const credentials: RequestCredentials = config.credentials ?? 'same-origin'
   const baseUrl = config.baseUrl ?? ''
   const store = config.permissionStore ?? defaultPermissionStore
@@ -174,7 +187,7 @@ export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
       return { status: 'anonymous' }
     }
     if (!res.ok) {
-      return { status: 'unknown', error: await failureFrom(res, messages.sessionCheckFailed) }
+      return { status: 'unknown', error: await failureFrom(res, messages.sessionCheckFailed, policy) }
     }
     let user: TUser
     try {
@@ -202,8 +215,8 @@ export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
       // 401 은 자격 증명 문구로 고정한다 — 서버 문장(«Unauthorized» 등)보다 사용자에게 맞는 말이다.
       const error =
         res.status === 401
-          ? await failureFrom(res, messages.invalidCredentials, () => messages.invalidCredentials)
-          : await failureFrom(res, messages.loginFailed, config.extractLoginError)
+          ? await failureFrom(res, messages.invalidCredentials, policy, () => messages.invalidCredentials)
+          : await failureFrom(res, messages.loginFailed, policy, config.extractLoginError)
       return { ok: false, message: error.message, error }
     }
     const body = parseBody(await res.text().catch(() => ''))
@@ -231,7 +244,7 @@ export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
       return { ok: false, message: messages.networkError, error: new ApiError(messages.networkError, 0, { cause }) }
     }
     if (!res.ok && res.status !== 401) {
-      const error = await failureFrom(res, messages.logoutFailed)
+      const error = await failureFrom(res, messages.logoutFailed, policy)
       return { ok: false, message: error.message, error }
     }
     syncPermissions(null)
