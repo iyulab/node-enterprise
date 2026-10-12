@@ -205,14 +205,15 @@ The tag is opaque — do not read, compare or compute the row-version field; pas
 `odataGetById` copies the `ETag` header into `@odata.etag` when the body has none, so `etagOf`
 is the one way to read it. Without `ifMatch` a write is unconditional, as before.
 
-## `fetchRaw(url)`
+## `fetchRaw(url, opts?)`
 
 Returns the `HttpResponse` from `@iyulab/http-client` **as is**: it does not throw on
-non-2xx and does not call `onUnauthorized`. It takes only a URL (no `opts`). Use it for
-hand-built URLs such as CSV export or a reachability probe:
+non-2xx and does not call `onUnauthorized`. Its only option is `signal` — aborting it rejects with
+`signal.reason`, like every other method. Use it for hand-built URLs such as CSV export or a
+reachability probe:
 
 ```ts
-const res = await svc.fetchRaw(svc.apiUrl('ping'))
+const res = await svc.fetchRaw(svc.apiUrl('ping'), { signal: AbortSignal.timeout(10_000) })
 // Reaching this line means the server answered — even a 401 proves it is reachable.
 if (!res.ok) { /* decide yourself */ }
 ```

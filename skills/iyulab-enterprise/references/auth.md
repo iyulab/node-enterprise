@@ -48,6 +48,7 @@ export const auth = createAuthClient<User, { Username: string; Password: string 
 | `logoutFailed` | `logout` gets a non-2xx other than 401 and no server message is found | `Could not sign out.` |
 | `networkError` | No response at all (network failure, offline) | `A network error occurred.` |
 | `invalidResponse` | A 2xx response whose body is not JSON | `The server returned an unreadable response.` |
+| `canceled` | The call's `signal` aborted it | `The request was canceled.` |
 
 The client uses plain `fetch`, deliberately bypassing any HTTP interceptors: a 401 from
 `meUrl` is the "not signed in" signal, not an error to redirect on.
@@ -56,9 +57,19 @@ The client uses plain `fetch`, deliberately bypassing any HTTP interceptors: a 4
 
 | Method | Returns | Behaviour |
 |---|---|---|
-| `fetchMe()` | `Promise<SessionState<TUser>>` | One of three answers, below. Never throws |
-| `login(credentials)` | `Promise<LoginResult<TUser>>` | Never throws; see below |
-| `logout()` | `Promise<LogoutResult>` | POSTs to `logoutUrl`. Never throws; see below |
+| `fetchMe(options?)` | `Promise<SessionState<TUser>>` | One of three answers, below. Never throws |
+| `login(credentials, options?)` | `Promise<LoginResult<TUser>>` | Never throws; see below |
+| `logout(options?)` | `Promise<LogoutResult>` | POSTs to `logoutUrl`. Never throws; see below |
+
+`options` is `AuthRequestOptions` — `{ signal?: AbortSignal }`, the standard `fetch` signal. Abort it to put a time
+budget on a session check while the server is slow to answer, or to drop a request when the screen goes away. An
+aborted call still does not throw: `fetchMe` gives `{ status: 'unknown' }` and `login`/`logout` give `{ ok: false }`,
+with `error.status` `0`, `error.cause` the `signal.reason`, and the `canceled` message. It leaves the permission store
+as it was.
+
+```ts
+const session = await auth.fetchMe({ signal: AbortSignal.timeout(10_000) })
+```
 
 `SessionState<TUser>` — a session lookup has three answers, and only one of them means
 "sign in":

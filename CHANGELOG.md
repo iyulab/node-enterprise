@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+
+- **A `signal` for the auth client and `fetchRaw`** — `fetchMe(options?)`, `login(credentials, options?)`,
+  `logout(options?)` take `AuthRequestOptions` (`{ signal?: AbortSignal }`), and `fetchRaw(url, opts?)` takes
+  `{ signal }`. A session check or reachability probe can now put a time budget on a server that is slow to answer and
+  drop the request it no longer waits for. An aborted auth call still does not throw: `fetchMe` gives
+  `{ status: 'unknown' }`, `login`/`logout` give `{ ok: false }`, with `error.status` `0`, `error.cause` the
+  `signal.reason`, and the new `canceled` message. `fetchRaw` rejects with `signal.reason`, like the other service
+  methods.
+
 ### Changed
 
 - 🔴**The server's rejection sentence is shown again by default** (reverts the 0.31.0 rule). In OData JSON the

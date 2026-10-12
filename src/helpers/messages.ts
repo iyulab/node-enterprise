@@ -32,7 +32,7 @@ export type EnterpriseMessageKey =
   | 'http400' | 'http403' | 'http404' | 'http409' | 'http412' | 'http500'
   // 인증 클라이언트(`createAuthClient`) — 설정 `messages` 가 주지 않은 문구
   | 'authInvalidCredentials' | 'authLoginFailed' | 'authSessionCheckFailed' | 'authLogoutFailed'
-  | 'authNetworkError' | 'authInvalidResponse';
+  | 'authNetworkError' | 'authInvalidResponse' | 'authCanceled';
 
 /** 이 패키지의 문자열 묶음. 소비자는 `messages.register(locale, table)` 로 덮거나 언어를 더한다. */
 export const messages = Locale.namespace<EnterpriseMessageKey>('@iyulab/enterprise');
@@ -73,6 +73,7 @@ messages.register('en', {
   authLogoutFailed: 'Could not sign out.',
   authNetworkError: 'A network error occurred.',
   authInvalidResponse: 'The server returned an unreadable response.',
+  authCanceled: 'The request was canceled.',
 });
 
 messages.register('ko', {
@@ -111,4 +112,5 @@ messages.register('ko', {
   authLogoutFailed: '로그아웃하지 못했습니다.',
   authNetworkError: '네트워크 오류가 발생했습니다.',
   authInvalidResponse: '서버 응답을 읽을 수 없습니다.',
+  authCanceled: '요청을 취소했습니다.',
 });

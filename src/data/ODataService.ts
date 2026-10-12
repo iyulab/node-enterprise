@@ -348,8 +348,11 @@ export interface ODataService {
    * ⚠**0.15.0 이전에는 선언이 이렇게 적혀 있으면서 실제로는 비-2xx 에 던졌다**(`throwIfError`
    * 를 거쳤다). 그 어긋남 때문에 *"응답이 왔는가"* 만 묻는 연결 프로브가 401 을 「끊김」으로
    * 세었다 — 서버가 살아서 거절한 것인데도. 선언이 옳고 구현이 틀렸던 자리라 구현을 고쳤다.
+   *
+   * `opts.signal` 로 끊으면 다른 메서드처럼 **`signal.reason` 을 그대로** 던진다 — 서버가 오래 답하지 않는
+   * 연결 확인에 시간 예산을 걸고 지난 요청을 끊는 자리다.
    */
-  fetchRaw(url: string): Promise<HttpResponse>
+  fetchRaw(url: string, opts?: Pick<ODataRequestOptions, 'signal'>): Promise<HttpResponse>
 
   /**
    * flex-table `useODataSource` 에 주입할 공용 transport 옵션.
@@ -722,8 +725,8 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     return notifyingWrite(() => apiDeleteQuiet<T>(path, opts), opts)
   }
 
-  async function fetchRaw(url: string): Promise<HttpResponse> {
-    return client.get(url)
+  async function fetchRaw(url: string, opts?: Pick<ODataRequestOptions, 'signal'>): Promise<HttpResponse> {
+    return cancellable(opts, () => client.get(url, transport(opts)))
   }
 
   return {

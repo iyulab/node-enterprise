@@ -41,6 +41,19 @@ export interface AuthClientMessages {
   networkError: string
   /** 2xx 응답의 본문을 읽지 못함 */
   invalidResponse: string
+  /** 호출자의 `signal` 이 요청을 끊음 */
+  canceled: string
+}
+
+/**
+ * 한 호출에만 적용되는 옵션.
+ * - `signal`: 이 호출을 끊을 표준 신호(`fetch` 의 `signal` 과 같다) — 서버가 오래 답하지 않을 때 시간 예산을 걸거나,
+ *   화면을 떠나며 지난 요청을 버리는 자리. 끊겨도 **던지지 않는다**: `fetchMe` 는 `{ status: 'unknown' }`,
+ *   `login`·`logout` 은 `{ ok: false }` 이고, `error.status` 는 `0`, `error.cause` 는 `signal.reason` 이다.
+ *   끊긴 호출은 권한 store 를 건드리지 않는다.
+ */
+export interface AuthRequestOptions {
+  signal?: AbortSignal
 }
 
 /**
@@ -120,11 +133,11 @@ export interface AuthClientConfig<TUser> {
 
 export interface AuthClient<TUser, TCredentials> {
   /** 현재 세션 조회. 던지지 않는다 — 결과는 `SessionState` 의 셋 중 하나다. */
-  fetchMe(): Promise<SessionState<TUser>>
+  fetchMe(options?: AuthRequestOptions): Promise<SessionState<TUser>>
   /** 로그인. 던지지 않는다. 성공 시 권한 store 자동 갱신(getPermissions 지정 시). */
-  login(credentials: TCredentials): Promise<LoginResult<TUser>>
+  login(credentials: TCredentials, options?: AuthRequestOptions): Promise<LoginResult<TUser>>
   /** 로그아웃. 던지지 않는다 — 결과는 `LogoutResult`. 성공 시에만 권한 store 자동 clear(getPermissions 지정 시). */
-  logout(): Promise<LogoutResult>
+  logout(options?: AuthRequestOptions): Promise<LogoutResult>
 }
 
 /** 실패 본문을 읽는다 — JSON 이면 파싱한 값, 아니면 텍스트, 비었으면 undefined(`ApiError.body` 의 규칙). */
@@ -162,6 +175,7 @@ export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
     get logoutFailed() { return own?.logoutFailed ?? registry.text('authLogoutFailed') },
     get networkError() { return own?.networkError ?? registry.text('authNetworkError') },
     get invalidResponse() { return own?.invalidResponse ?? registry.text('authInvalidResponse') },
+    get canceled() { return own?.canceled ?? registry.text('authCanceled') },
   }
   const policy = config.serverMessages
   const credentials: RequestCredentials = config.credentials ?? 'same-origin'
@@ -169,18 +183,25 @@ export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
   const store = config.permissionStore ?? defaultPermissionStore
   const url = (u: string) => (baseUrl && u.startsWith('/') ? `${baseUrl}${u}` : u)
 
+  /** 응답을 받지 못한 실패 — 호출자가 끊었으면 `canceled`, 아니면 `networkError`(원인은 `cause`). */
+  const noAnswer = (signal: AbortSignal | undefined, cause: unknown): ApiError =>
+    signal?.aborted
+      ? new ApiError(messages.canceled, 0, { cause: signal.reason })
+      : new ApiError(messages.networkError, 0, { cause })
+
   const syncPermissions = (user: TUser | null) => {
     if (!config.getPermissions) return
     if (user) store.set(config.getPermissions(user))
     else store.clear()
   }
 
-  async function fetchMe(): Promise<SessionState<TUser>> {
+  async function fetchMe(options?: AuthRequestOptions): Promise<SessionState<TUser>> {
+    const signal = options?.signal
     let res: Response
     try {
-      res = await fetch(url(config.meUrl), { credentials })
+      res = await fetch(url(config.meUrl), { credentials, signal })
     } catch (cause) {
-      return { status: 'unknown', error: new ApiError(messages.networkError, 0, { cause }) }
+      return { status: 'unknown', error: noAnswer(signal, cause) }
     }
     if (res.status === 401) {
       syncPermissions(null)
@@ -192,14 +213,17 @@ export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
     let user: TUser
     try {
       user = (await res.json()) as TUser
-    } catch {
+    } catch (cause) {
+      // 본문을 읽는 중에 끊긴 것은 «읽을 수 없는 응답» 이 아니다.
+      if (signal?.aborted) return { status: 'unknown', error: noAnswer(signal, cause) }
       return { status: 'unknown', error: new ApiError(messages.invalidResponse, res.status) }
     }
     syncPermissions(user)
     return { status: 'authenticated', user }
   }
 
-  async function login(cred: TCredentials): Promise<LoginResult<TUser>> {
+  async function login(cred: TCredentials, options?: AuthRequestOptions): Promise<LoginResult<TUser>> {
+    const signal = options?.signal
     let res: Response
     try {
       res = await fetch(url(config.loginUrl), {
@@ -207,9 +231,11 @@ export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
         headers: { 'Content-Type': 'application/json' },
         credentials,
         body: JSON.stringify(cred),
+        signal,
       })
     } catch (cause) {
-      return { ok: false, message: messages.networkError, error: new ApiError(messages.networkError, 0, { cause }) }
+      const error = noAnswer(signal, cause)
+      return { ok: false, message: error.message, error }
     }
     if (!res.ok) {
       // 401 은 자격 증명 문구로 고정한다 — 서버 문장(«Unauthorized» 등)보다 사용자에게 맞는 말이다.
@@ -220,9 +246,13 @@ export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
       return { ok: false, message: error.message, error }
     }
     const body = parseBody(await res.text().catch(() => ''))
+    if (signal?.aborted) {
+      const error = noAnswer(signal, signal.reason)
+      return { ok: false, message: error.message, error }
+    }
     if (config.loginUser === 'me') {
       // 세션 사용자의 정본은 `me` — 권한도 그 조회가 갱신한다.
-      const session = await fetchMe()
+      const session = await fetchMe({ signal })
       if (session.status === 'authenticated') return { ok: true, user: session.user, body }
       const error = session.status === 'unknown' ? session.error : new ApiError(messages.invalidResponse, res.status, { body })
       return { ok: false, message: error.message, error }
@@ -236,12 +266,14 @@ export function createAuthClient<TUser, TCredentials = Record<string, unknown>>(
     return { ok: true, user, body }
   }
 
-  async function logout(): Promise<LogoutResult> {
+  async function logout(options?: AuthRequestOptions): Promise<LogoutResult> {
+    const signal = options?.signal
     let res: Response
     try {
-      res = await fetch(url(config.logoutUrl), { method: 'POST', credentials })
+      res = await fetch(url(config.logoutUrl), { method: 'POST', credentials, signal })
     } catch (cause) {
-      return { ok: false, message: messages.networkError, error: new ApiError(messages.networkError, 0, { cause }) }
+      const error = noAnswer(signal, cause)
+      return { ok: false, message: error.message, error }
     }
     if (!res.ok && res.status !== 401) {
       const error = await failureFrom(res, messages.logoutFailed, policy)
