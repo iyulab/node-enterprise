@@ -70,7 +70,7 @@ export interface ApiErrorInit {
 export class ApiError extends Error {
   readonly status: number
   /**
-   * 서버가 정한 거절 코드 — OData v4 오류 봉투의 `error.code`(없으면 최상위 `code`). 같은 상태 안에서
+   * 서버가 정한 거절 코드 — OData v4 오류 봉투의 `error.code`(없으면 최상위 `code` → `Code`). 같은 상태 안에서
    * 실패를 가른다(예: 403 중 «비밀번호 변경 필요»). 서버가 주지 않았으면 undefined.
    */
   readonly code?: string
@@ -268,7 +268,7 @@ export interface ODataServiceConfig {
     status: number
     statusText: string
     rawMessage?: string
-    /** 서버의 거절 코드 — OData v4 `error.code`(없으면 최상위 `code`). `ApiError.code` 와 같은 값. */
+    /** 서버의 거절 코드 — OData v4 `error.code`(없으면 최상위 `code` → `Code`). `ApiError.code` 와 같은 값. */
     code?: string
     /** OData v4 `error.details` — 검증을 마친 항목만 실린다(`ApiError.details` 와 같은 값). */
     details?: ApiErrorDetail[]
@@ -460,7 +460,7 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     res: HttpResponse,
   ): Promise<{ message: string; code?: string; details?: ApiErrorDetail[]; body?: unknown }> {
     const body = parseBody(await res.text().catch(() => ''))
-    // OData 봉투(error.*)와 커스텀 REST 최상위(message·Message·code) 관례를 함께 읽는다 — 인증 클라이언트와 같은 규칙.
+    // OData 봉투(error.*)와 커스텀 REST 최상위(message·Message·code·Code) 관례를 함께 읽는다 — 인증 클라이언트와 같은 규칙.
     const { rawMessage, code, details } = readErrorEnvelope(body)
 
     if (config.formatError) {

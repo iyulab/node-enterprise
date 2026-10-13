@@ -297,7 +297,7 @@ try {
 |------|------|
 | `message` | 사용자 대면 메시지 (`formatError` → 서버 raw → status 폴백 순으로 결정) |
 | `status` | HTTP status |
-| `code` | 서버가 정한 거절 코드 — OData `error.code`(봉투가 없으면 최상위 `code`). 같은 상태 안의 실패를 가른다(예: 403 중 «비밀번호 변경 필요»). 없거나 빈 문자열이면 `undefined` |
+| `code` | 서버가 정한 거절 코드 — OData `error.code`(봉투가 없으면 최상위 `code` → `Code`). 같은 상태 안의 실패를 가른다(예: 403 중 «비밀번호 변경 필요»). 없거나 빈 문자열이면 `undefined` |
 | `details` | `error.details` 항목 배열 — 규격상 `code`/`message` 는 필수, `target`(속성 이름)은 선택. 상세가 없거나 규격 형태가 아니면 `undefined` |
 | `body` | 실패 응답의 본문 — JSON 이면 파싱한 값, 아니면 텍스트, 비었으면 `undefined`. 거절이 싣는 «충돌의 현재 상태»(409 의 새 판정, 412 의 현재 표현)를 같은 요청을 다시 보내지 않고 읽는다. 모양은 서버 계약이라 `unknown` — 호출부가 좁힌다. `formatError` 가 받는 `body` 와 같은 값. 표준 `cause` 처럼 열거되지 않는다(직렬화·로그에 실리지 않음) |
 | `cause` | 표준 `Error.cause` — 응답 없이 실패했을 때(인증 클라이언트의 네트워크 오류, `status` 0) 전송이 던진 예외. 진단용 |

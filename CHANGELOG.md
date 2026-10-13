@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **`ApiError.code` also reads a top-level `Code`.** The message was read from `error.message`, `message` and `Message`,
+  but the code only from `error.code` and `code`, so a `{ "Code": "…", "Message": "…" }` body kept its sentence and lost
+  the code that tells same-status failures apart. The order is `error.code` → `code` → `Code`; an empty string is still
+  no code. `formatError` receives the same value, and the auth client reads it the same way.
+
 ## [0.32.1] - 2026-10-13
 
 ### Fixed

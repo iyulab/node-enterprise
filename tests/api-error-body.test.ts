@@ -57,6 +57,53 @@ describe('ApiError.body — data service', () => {
   })
 })
 
+// 코드는 메시지와 같은 관례 집합에서 읽는다 — 문장(`Message`)은 읽고 코드(`Code`)는 버리면 소비자가 문구로 분기한다.
+describe('ApiError.code — the same conventions as the message', () => {
+  it('reads a top-level PascalCase Code next to Message', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    queue.push(json({ Code: 'order_ship_hold', Message: 'The order is on hold.' }, 409))
+    const err = await svc.apiPost('shipments', { id: 1 }).catch((e: unknown) => e)
+    expect((err as ApiError).code).toBe('order_ship_hold')
+    expect((err as ApiError).message).toBe('The order is on hold.')
+  })
+
+  it('prefers the envelope, then lowercase code, over Code', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    queue.push(json({ error: { code: 'Envelope', message: 'x' }, code: 'lower', Code: 'Pascal' }, 409))
+    const enveloped = await svc.odataGet('Orders').catch((e: unknown) => e)
+    expect((enveloped as ApiError).code).toBe('Envelope')
+
+    queue.push(json({ code: 'lower', Code: 'Pascal' }, 409))
+    const lower = await svc.odataGet('Orders').catch((e: unknown) => e)
+    expect((lower as ApiError).code).toBe('lower')
+  })
+
+  it('treats an empty Code as no code', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    queue.push(json({ Code: '', Message: 'x' }, 409))
+    const err = await svc.odataGet('Orders').catch((e: unknown) => e)
+    expect((err as ApiError).code).toBeUndefined()
+  })
+
+  it('gives formatError the Code', async () => {
+    let seen: string | undefined
+    const svc = createODataService({ baseUrl: BASE, formatError: (info) => { seen = info.code; return undefined } })
+    queue.push(json({ Code: 'issued_waybills', Message: 'x' }, 409))
+    await svc.odataGet('Orders').catch(() => undefined)
+    expect(seen).toBe('issued_waybills')
+  })
+
+  it('reads Code for the auth client too', async () => {
+    const auth = createAuthClient<{ Id: string }, { u: string }>({
+      meUrl: '/api/auth/me', loginUrl: '/api/auth/login', logoutUrl: '/api/auth/logout',
+    })
+    queue.push(json({ Code: 'password_expired', Message: 'Change your password.' }, 403))
+    const r = await auth.login({ u: 'a' })
+    if (r.ok) throw new Error('expected failure')
+    expect(r.error.code).toBe('password_expired')
+  })
+})
+
 describe('ApiError — auth client', () => {
   const urls = { meUrl: '/api/auth/me', loginUrl: '/api/auth/login', logoutUrl: '/api/auth/logout' }
 
