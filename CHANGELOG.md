@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.34.3] - 2026-10-15
+
+### Fixed
+
+- **`@iyulab/enterprise/react` and `@iyulab/enterprise/list-page` can be used in one program.** The React entry's
+  declarations carried their own copy of the `UListPage` class for the `'u-list-page'` tag map merge, a second type for
+  the same tag, so type-checking both entries together failed with `TS2717`. The merge now refers to the list-page
+  entry's class. Types only — runtime unchanged.
+
 ## [0.34.2] - 2026-10-15
 
 ### Fixed
