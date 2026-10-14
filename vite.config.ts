@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import dts from 'vite-plugin-dts';
 import stripCssComments from '@iyulab/components/plugins/vite-plugin-strip-css-comments.js';
+import { fixPublishedDtsGlobals } from '@iyulab/components/plugins/dts-globals.js';
 import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
 
@@ -59,6 +60,11 @@ export default defineConfig({
     dts({
       include: ['src/**/*'],
       bundleTypes: { invokeOptions: { typescriptCompilerFolder: extractorTypescript } },
+      // 선언 번들러는 소스 전체의 `declare global` 병합을 엔트리마다 싣고 그 병합이 가리키는 클래스는 그 엔트리에
+      // 없으면 뺀다 — 남은 이름을 그것을 내보내는 엔트리로 잇는다(components `plugins/dts-globals`).
+      afterBuild() {
+        fixPublishedDtsGlobals(__dirname);
+      },
     }),
   ]
 });
