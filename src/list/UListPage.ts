@@ -40,8 +40,11 @@ type SlotName = typeof SLOTS[number];
  * - **카드**: `appearance="card"` 면 툴바 · 뷰(또는 빈·오류) · 페이저가 한 면에 놓인다 — 테두리 하나, 영역 사이 선.
  *   뷰가 자기 테두리를 그리면(`flex-table` · `u-rich-table`) 면 안에서는 그 테두리를 걷는다.
  *
- * 선택과 행 열기는 묶지 않는다 — 소스의 것이 아니라 화면의 것이라, 뷰에서 직접 듣는다. 레이아웃이 전혀 다르면 이 요소 없이
- * `bindSource` 만 쓴다.
+ * - **선택 상태**: 보이는 뷰가 `selection-change {selectedIds}` 로 하나라도 골랐다고 말하는 동안 `:state(selected)` 가 켜진다 —
+ *   카드 툴바를 일괄 동작 막대로 칠하는 손잡이다(`u-list-page:state(selected)::part(toolbar)`). 숨은 뷰의 선택은 세지 않는다.
+ *
+ * 선택과 행 열기는 묶지 않는다 — 소스의 것이 아니라 화면의 것이라, 뷰에서 직접 듣는다(골격은 선택을 읽어 상태로만 낸다).
+ * 레이아웃이 전혀 다르면 이 요소 없이 `bindSource` 만 쓴다.
  *
  * @slot header - 화면 머리(예: `u-page-header` — 그 `actions` 슬롯에 화면 고유 버튼)
  * @slot filters - 화면 고유 검색 조건 — `search {query}` 를 내면 소스 검색어가 된다
@@ -86,9 +89,22 @@ export class UListPage extends UElement {
   private bound = new Map<Element, () => void>();
   private unsubscribe?: () => void;
 
+  /** 뷰마다 마지막으로 말한 선택 수 — `selection-change {selectedIds}` 에서. 보이는 뷰의 것만 `:state(selected)` 를 켠다. */
+  private selections = new WeakMap<Element, number>();
+  /** 지금 보이는 뷰(`applyView`). */
+  private activeView?: Element;
+
+  /**
+   * `:state(selected)` 을 싣는 자리 — 보이는 뷰에 선택이 있는 동안(`u-select:state(open)` 과 같은 관례).
+   * ⚠생성자에서 한 번만 붙인다 — 같은 인스턴스에 두 번 부르면 `NotSupportedError` 다.
+   */
+  private readonly internals: ElementInternals | undefined =
+    typeof this.attachInternals === 'function' ? this.attachInternals() : undefined;
+
   constructor() {
     super();
     this.addEventListener('search', this.onSearch);
+    this.addEventListener('selection-change', this.onSelectionChange);
   }
 
   connectedCallback(): void {
@@ -164,7 +180,28 @@ export class UListPage extends UElement {
     const views = this.assigned('view');
     const active = (this.view && views.find((v) => v.getAttribute('view-name') === this.view)) || views[0];
     for (const v of views) v.toggleAttribute('hidden', v !== active);
+    this.activeView = active;
+    this.applySelected();
   }
+
+  /** 보이는 뷰의 선택 수 → `:state(selected)`. */
+  private applySelected() {
+    const count = this.activeView ? this.selections.get(this.activeView) ?? 0 : 0;
+    this.internals?.states?.[count > 0 ? 'add' : 'delete']('selected');
+  }
+
+  /**
+   * 뷰 영역의 요소가 낸 `selection-change {selectedIds}` → 그 뷰의 선택 수. 선택을 소스에 묶지 않는다 — 읽어서 상태로만 낸다.
+   * 뷰 밖(머리 · 필터 · 툴바)에서 난 같은 이름의 이벤트는 목록의 선택이 아니다.
+   */
+  private onSelectionChange = (e: Event) => {
+    const ids = (e as CustomEvent<{ selectedIds?: unknown }>).detail?.selectedIds;
+    if (!Array.isArray(ids)) return;
+    const child = e.composedPath().find((n) => n instanceof Element && n.parentElement === this) as Element | undefined;
+    if (!child || !this.assigned('view').includes(child)) return;
+    this.selections.set(child, ids.length);
+    if (child === this.activeView) this.applySelected();
+  };
 
   private attachSource() {
     const source = this.source;
