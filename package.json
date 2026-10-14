@@ -1,6 +1,6 @@
 {
   "name": "@iyulab/enterprise",
-  "version": "0.34.2",
+  "version": "0.34.3",
   "description": "Enterprise utilities and components for iyulab framework",
   "keywords": [
     "enterprise",
@@ -66,7 +66,7 @@
     "odata-query": "^8.1.0"
   },
   "devDependencies": {
-    "@iyulab/components": "^2.27.0",
+    "@iyulab/components": "^2.27.1",
     "@lit/react": "^1.0.8",
     "@microsoft/api-extractor": "^7.58.8",
     "@types/node": "^26.1.1",
