@@ -193,12 +193,14 @@ export class UListPage extends UElement {
   /**
    * 뷰 영역의 요소가 낸 `selection-change {selectedIds}` → 그 뷰의 선택 수. 선택을 소스에 묶지 않는다 — 읽어서 상태로만 낸다.
    * 뷰 밖(머리 · 필터 · 툴바)에서 난 같은 이름의 이벤트는 목록의 선택이 아니다.
+   * ⚠뷰 영역은 슬롯 배정이 아니라 자식의 `slot` 으로 가른다 — 골격이 처음 그려지기 전(슬롯이 아직 없을 때) 뷰가 알린 초기 선택도
+   *   잃지 않는다. 직계 자식의 `slot="view"` 가 곧 그 슬롯의 배정이다.
    */
   private onSelectionChange = (e: Event) => {
     const ids = (e as CustomEvent<{ selectedIds?: unknown }>).detail?.selectedIds;
     if (!Array.isArray(ids)) return;
     const child = e.composedPath().find((n) => n instanceof Element && n.parentElement === this) as Element | undefined;
-    if (!child || !this.assigned('view').includes(child)) return;
+    if (!child || child.slot !== 'view') return;
     this.selections.set(child, ids.length);
     if (child === this.activeView) this.applySelected();
   };

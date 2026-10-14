@@ -91,6 +91,18 @@ describe('u-list-page :state(selected)', () => {
     expect(selected(page)).toBe(false);
   });
 
+  it('🔴a selection the view reports before the skeleton first renders is kept (an initial selection)', async () => {
+    document.head.appendChild(sheet);
+    const page = document.createElement('u-list-page') as UListPage;
+    const table = document.createElement('select-view') as SelectView;
+    table.slot = 'view';
+    page.append(table);
+    document.body.append(page);
+    table.select(['1']); // before the skeleton's first update — its slots are not assigned yet
+    await settle(page);
+    expect(selected(page)).toBe(true);
+  });
+
   it('NEGATIVE: the same event from outside the view region does not count', async () => {
     const page = await mount();
     const toolbar = page.querySelector('[slot="toolbar"]')!;
