@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.34.2] - 2026-10-15
+
+### Fixed
+
+- **The main entry and `@iyulab/enterprise/icons` type declarations compile on their own.** They carried the
+  `'u-list-page'` tag map merge without the `UListPage` class (it lives in `@iyulab/enterprise/list-page`), so a
+  project checking library types (`skipLibCheck: false`) failed with `TS2304: Cannot find name 'UListPage'` just for
+  importing the package — since 0.28.0. The merge now refers to the list-page entry. Types only — runtime unchanged.
+
 ## [0.34.1] - 2026-10-14
 
 ### Fixed
