@@ -60,8 +60,8 @@ export const styles = css`
     background-color: var(--u-panel-bg-color, #FFFFFF);
     overflow: hidden;
   }
+  /* 툴바는 꽉 찬다 — 그 자리의 내용(u-action-bar · 툴바 줄)은 자기 여백과 면(선택 상태의 틴트)을 갖는다. 영역은 선만 긋는다. */
   :host([appearance='card']) [part~='toolbar'] {
-    padding: var(--u-space-sm, 8px) var(--u-space-md, 12px);
     border-bottom: 1px solid var(--u-border-color, #E0E0E0);
   }
   :host([appearance='card']) [part~='pager'] {
