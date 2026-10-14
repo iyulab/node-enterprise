@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **`u-list-page` `slot="applied"` — the conditions in force.** A wrapping row of chips (`u-chip removable`) under the
+  filters and above the toolbar, more tightly spaced than the filters; it folds and leaves no gap when the last chip
+  goes. Part `applied`.
+- **`u-list-page` `appearance="card"` — toolbar, view and pager on one surface.** One border, lines between the regions
+  instead of gaps, the toolbar and the pager padded, and a view's own frame (`flex-table`, `u-rich-table`) removed
+  inside it. The header, filters and applied conditions stay outside. Part `surface`. The default (`plain`) is
+  unchanged.
+
 ## [0.32.2] - 2026-10-13
 
 ### Fixed

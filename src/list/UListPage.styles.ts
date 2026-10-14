@@ -35,4 +35,46 @@ export const styles = css`
     min-width: 0;
     min-height: 0;
   }
+
+  /* 적용된 조건 — 칩 줄. 필터보다 촘촘한 간격으로 감긴다(같은 줄의 칩은 한 묶음으로 읽힌다). */
+  [part~='applied'] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--u-space-xs, 6px);
+  }
+
+  /* 면 — plain 에서는 상자를 만들지 않는다(영역이 호스트의 간격으로 그대로 쌓인다). */
+  [part~='surface'] {
+    display: contents;
+  }
+
+  /* card — 툴바 · 뷰 · 페이저가 한 면에: 테두리 하나, 영역 사이는 간격이 아니라 선이다.
+     숨은 영역은 상자째 빠지므로 선이 겹치지 않는다(첫 영역의 위 · 마지막 영역의 아래에는 선이 없다). */
+  :host([appearance='card']) [part~='surface'] {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border: 1px solid var(--u-border-color, #E0E0E0);
+    border-radius: var(--u-radius-xl, 8px);
+    background-color: var(--u-panel-bg-color, #FFFFFF);
+    overflow: hidden;
+  }
+  :host([appearance='card']) [part~='toolbar'] {
+    padding: var(--u-space-sm, 8px) var(--u-space-md, 12px);
+    border-bottom: 1px solid var(--u-border-color, #E0E0E0);
+  }
+  :host([appearance='card']) [part~='pager'] {
+    padding: var(--u-space-sm, 8px) var(--u-space-md, 12px);
+    border-top: 1px solid var(--u-border-color, #E0E0E0);
+  }
+  :host([appearance='card']) [part~='status'] {
+    padding: var(--u-space-lg, 16px);
+  }
+  /* 자기 테두리를 그리는 뷰(flex-table · u-rich-table)는 면 안에서 그 테두리를 걷는다 — 이중 테두리를 막는다. */
+  :host([appearance='card']) ::slotted([slot='view']) {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
 `;

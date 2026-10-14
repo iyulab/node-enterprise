@@ -6,6 +6,8 @@ import { styles } from './UListPage.styles.js';
 
 /** 목록이 지금 보이는 상태 — 호스트의 `status` 속성으로 반영된다. */
 export type ListPageStatus = 'loading' | 'error' | 'empty' | 'ready';
+/** 외형 — `plain`(기본: 영역이 간격만 두고 쌓인다) · `card`(툴바 · 뷰 · 페이저를 한 면에 — 테두리 하나, 영역 사이 선). */
+export type ListPageAppearance = 'plain' | 'card';
 
 /** 소스가 묶이는 영역 — 뷰와 페이저. 나머지 영역(머리 · 필터 · 툴바)은 소스를 받지 않는다. */
 const BOUND_SLOTS = ['view', 'pager'] as const;
@@ -15,7 +17,7 @@ const BOUND_SLOTS = ['view', 'pager'] as const;
  */
 const OPTION_QUERY_EMITTERS = new Set(['u-select']);
 /** 모든 영역 — 채워지지 않은 영역은 상자째 빠진다. */
-const SLOTS = ['header', 'filters', 'toolbar', 'view', 'pager', 'empty', 'error'] as const;
+const SLOTS = ['header', 'filters', 'applied', 'toolbar', 'view', 'pager', 'empty', 'error'] as const;
 type SlotName = typeof SLOTS[number];
 
 /**
@@ -33,12 +35,17 @@ type SlotName = typeof SLOTS[number];
  * - **빈·오류**: 소스가 오류면 `slot="error"`, 결과가 비면 `slot="empty"` 를 뷰와 페이저 대신 보인다. 그 슬롯이 비어 있으면
  *   뷰가 자기 표시(두 표가 이미 그리는 오류·빈 문구)를 그대로 보인다.
  * - **상태**: 호스트 `status` 속성(`loading` · `error` · `empty` · `ready`) — 소비자 CSS 와 시험이 읽는다.
+ * - **적용된 조건**: `slot="applied"` 에 지금 걸린 조건(예: `u-chip removable`)을 둔다 — 필터 아래 한 줄로 감기고,
+ *   마지막 칩이 빠지면 영역째 접힌다. 칩을 지웠을 때 조건을 푸는 것은 화면의 몫이다(칩의 `remove` 를 듣는다).
+ * - **카드**: `appearance="card"` 면 툴바 · 뷰(또는 빈·오류) · 페이저가 한 면에 놓인다 — 테두리 하나, 영역 사이 선.
+ *   뷰가 자기 테두리를 그리면(`flex-table` · `u-rich-table`) 면 안에서는 그 테두리를 걷는다.
  *
  * 선택과 행 열기는 묶지 않는다 — 소스의 것이 아니라 화면의 것이라, 뷰에서 직접 듣는다. 레이아웃이 전혀 다르면 이 요소 없이
  * `bindSource` 만 쓴다.
  *
  * @slot header - 화면 머리(예: `u-page-header` — 그 `actions` 슬롯에 화면 고유 버튼)
  * @slot filters - 화면 고유 검색 조건 — `search {query}` 를 내면 소스 검색어가 된다
+ * @slot applied - 지금 걸린 조건(칩) — 비면 영역째 접힌다
  * @slot toolbar - 뷰 위의 동작 줄
  * @slot view - 뷰 요소(여럿이면 `view-name` 으로 고른다)
  * @slot pager - 페이저(예: `u-pagination`) — 소스에 묶인다
@@ -48,6 +55,8 @@ type SlotName = typeof SLOTS[number];
  * @csspart region - 각 영역의 상자(영역 이름 part 와 함께 붙는다)
  * @csspart header
  * @csspart filters
+ * @csspart applied
+ * @csspart surface - 툴바 · 뷰 · 빈·오류 · 페이저를 담는 상자(`appearance="card"` 의 면 — `plain` 에서는 상자를 만들지 않는다)
  * @csspart toolbar
  * @csspart view
  * @csspart pager
@@ -64,6 +73,9 @@ export class UListPage extends UElement {
 
   /** 보일 뷰의 `view-name`. 없으면 첫 뷰. */
   @property({ type: String, reflect: true }) view?: string;
+
+  /** 외형 — `plain`(기본) · `card`(툴바 · 뷰 · 페이저를 한 면에). */
+  @property({ type: String, reflect: true }) appearance: ListPageAppearance = 'plain';
 
   /** 목록 상태 — 소스에서 도출되며 속성으로 반영된다(읽기 전용으로 쓴다). */
   @property({ type: String, reflect: true }) status: ListPageStatus = 'ready';
@@ -110,16 +122,19 @@ export class UListPage extends UElement {
     return html`
       ${region('header')}
       ${region('filters')}
-      ${region('toolbar')}
-      <div part="region view" ?hidden=${panel !== null || !this.filled.has('view')}>
-        <slot name="view" @slotchange=${this.onSlotChange}></slot>
-      </div>
-      <div part="region status" ?hidden=${panel === null}>
-        <slot name="empty" ?hidden=${panel !== 'empty'} @slotchange=${this.onSlotChange}></slot>
-        <slot name="error" ?hidden=${panel !== 'error'} @slotchange=${this.onSlotChange}></slot>
-      </div>
-      <div part="region pager" ?hidden=${panel !== null || !this.filled.has('pager')}>
-        <slot name="pager" @slotchange=${this.onSlotChange}></slot>
+      ${region('applied')}
+      <div part="surface">
+        ${region('toolbar')}
+        <div part="region view" ?hidden=${panel !== null || !this.filled.has('view')}>
+          <slot name="view" @slotchange=${this.onSlotChange}></slot>
+        </div>
+        <div part="region status" ?hidden=${panel === null}>
+          <slot name="empty" ?hidden=${panel !== 'empty'} @slotchange=${this.onSlotChange}></slot>
+          <slot name="error" ?hidden=${panel !== 'error'} @slotchange=${this.onSlotChange}></slot>
+        </div>
+        <div part="region pager" ?hidden=${panel !== null || !this.filled.has('pager')}>
+          <slot name="pager" @slotchange=${this.onSlotChange}></slot>
+        </div>
       </div>
     `;
   }
