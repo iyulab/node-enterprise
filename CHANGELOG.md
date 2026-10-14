@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.34.1] - 2026-10-14
+
+### Fixed
+
+- **`u-list-page`: an initial selection keeps `:state(selected)` on.** A view that reported its selection before the
+  skeleton's first render (a table created with a selection in the same render pass) was ignored, because the view
+  region was judged by the slot assignment, which did not exist yet. The region is now judged by the child's
+  `slot="view"`.
+
 ## [0.34.0] - 2026-10-14
 
 ### Added
