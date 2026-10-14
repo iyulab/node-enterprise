@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.34.0] - 2026-10-14
+
+### Added
+
+- **`u-list-page`: `:state(selected)` while the visible view has a selection.** The skeleton reads the view's
+  `selection-change` (`selectedIds`) and sets the custom state while it is non-empty, so a theme can draw the card
+  toolbar as a bulk-action bar — `u-list-page:state(selected)::part(toolbar) { … }` — without each screen mapping its
+  selection count onto a toolbar class. A hidden view's selection does not count, a view that leaves takes its
+  selection with it, and the same event from outside the view region is ignored. The skeleton still does not bind
+  the selection. The default look is unchanged.
+
 ## [0.33.0] - 2026-10-14
 
 ### Added
