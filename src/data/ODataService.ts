@@ -417,6 +417,7 @@ export function createODataService(config: ODataServiceConfig): ODataService {
       config.onMutated(mutation)
     } catch (e) {
       if (typeof globalThis.reportError === 'function') globalThis.reportError(e)
+      // diagnostic: 소비자의 onMutated 가 던진 오류를 그대로 알린다 — reportError 가 없는 환경의 대체.
       else console.error(e)
     }
   }

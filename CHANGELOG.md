@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Console diagnostics begin with `[@iyulab/enterprise]`, so a message in a console shared by several packages says which one wrote it (several also say what to do next).
+
 ## [0.34.3] - 2026-10-15
 
 ### Fixed
