@@ -8,7 +8,7 @@ import { createODataService, ApiError, etagOf, wasNotified } from '../src/data/O
  *    요청마다 `AbortSignal` 을 넘길 자리가 없었다.
  * ⑵ 서버가 동시성 토큰(`@odata.etag`)을 내고 `If-Match` 를 지키는데, 쓰기에 그것을 실을 길이 없었다.
  */
-interface Seen { url: string; method: string; ifMatch: string | null; signal?: AbortSignal | null }
+interface Seen { url: string; method: string; ifMatch: string | null; headers: Headers; signal?: AbortSignal | null }
 let seen: Seen[] = []
 let respond: (req: Seen) => Promise<Response>
 
@@ -20,6 +20,7 @@ beforeEach(() => {
       url: String(input),
       method: (init?.method ?? 'GET').toUpperCase(),
       ifMatch: init?.headers ? new Headers(init.headers).get('If-Match') : null,
+      headers: new Headers(init?.headers),
       signal: init?.signal,
     }
     seen.push(req)
@@ -129,5 +130,35 @@ describe('ODataRequestOptions.ifMatch — 낙관적 동시성', () => {
     respond = async () => json({ Id: 1, '@odata.etag': 'W/"body"' }, 200, { ETag: 'W/"header"' })
     const svc = createODataService({ baseUrl: BASE })
     expect(etagOf(await svc.odataGetById('Orders', '1'))).toBe('W/"body"')
+  })
+})
+
+describe('ODataRequestOptions.headers — 호출 단위 머리글', () => {
+  it('🔴a call carries its own headers, on every page of odataGet', async () => {
+    let page = 0
+    respond = async () =>
+      page++ === 0
+        ? json({ value: [1], '@odata.nextLink': `${BASE}/$data/Orders?$skiptoken=1` })
+        : json({ value: [2] })
+    const svc = createODataService({ baseUrl: BASE })
+    await svc.odataGet('Orders', undefined, { headers: { 'X-Purpose': 'export' } })
+    expect(seen.map((s) => s.headers.get('X-Purpose'))).toEqual(['export', 'export'])
+  })
+
+  it('🔴a write carries them next to its JSON body, and ifMatch decides If-Match', async () => {
+    respond = async () => json({})
+    const svc = createODataService({ baseUrl: BASE })
+    await svc.odataPatch('Orders', '1', { Name: 'x' }, { headers: { 'Idempotency-Key': 'k1', 'If-Match': 'W/"0"' }, ifMatch: 'W/"7"' })
+    expect(seen[0].headers.get('Idempotency-Key')).toBe('k1')
+    expect(seen[0].headers.get('If-Match')).toBe('W/"7"')
+    expect(seen[0].headers.get('Content-Type')).toContain('application/json')
+  })
+
+  it('NEGATIVE — headers on one call do not reach the next', async () => {
+    respond = async () => json({ value: [] })
+    const svc = createODataService({ baseUrl: BASE })
+    await svc.odataGet('Orders', undefined, { headers: { 'X-Purpose': 'export' } })
+    await svc.odataGet('Orders')
+    expect(seen[1].headers.get('X-Purpose')).toBeNull()
   })
 })

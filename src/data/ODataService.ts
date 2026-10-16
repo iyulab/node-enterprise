@@ -174,6 +174,12 @@ export interface ODataRequestOptions {
    */
   ifMatch?: string
   /**
+   * 이 호출에만 더할 요청 머리글 — 용도 표지(«이 조회는 내보내기다») · 추적 · 멱등 키처럼 호출 하나에만 뜻이 있는 것.
+   * 서비스가 정하는 머리글(`Content-Type` 등)과 이름이 같으면 이것이 이긴다. `ifMatch` 를 함께 주면 `If-Match` 는
+   * `ifMatch` 가 정한다(같은 축을 두 자리에서 다르게 말하지 않게). 서버 주도 페이징을 따라가는 읽기는 페이지마다 싣는다.
+   */
+  headers?: HeadersInit
+  /**
    * `false` → 이 호출의 401 을 «세션 만료» 로 취급하지 않는다: 전역 `onUnauthorized` 를
    * 부르지 않고, `messages.sessionExpired` 로 덮어쓰지도 않으며, **서버가 준 메시지**로
    * `ApiError(…, 401)` 을 던진다. 기본값(생략 시)은 전역 정책 그대로다.
@@ -352,7 +358,7 @@ export interface ODataService {
    * `opts.signal` 로 끊으면 다른 메서드처럼 **`signal.reason` 을 그대로** 던진다 — 서버가 오래 답하지 않는
    * 연결 확인에 시간 예산을 걸고 지난 요청을 끊는 자리다.
    */
-  fetchRaw(url: string, opts?: Pick<ODataRequestOptions, 'signal'>): Promise<HttpResponse>
+  fetchRaw(url: string, opts?: Pick<ODataRequestOptions, 'signal' | 'headers'>): Promise<HttpResponse>
 
   /**
    * flex-table `useODataSource` 에 주입할 공용 transport 옵션.
@@ -427,10 +433,14 @@ export function createODataService(config: ODataServiceConfig): ODataService {
 
   /** 호출 옵션 → 전송 옵션. 더할 것이 없으면 `undefined` — 옵션을 생략한 호출의 요청은 종전과 같다. */
   function transport(opts?: ODataRequestOptions): RequestOptions | undefined {
-    if (!opts?.signal && !opts?.ifMatch) return undefined
+    if (!opts?.signal && !opts?.ifMatch && !opts?.headers) return undefined
     const t: RequestOptions = {}
     if (opts.signal) t.signal = opts.signal
-    if (opts.ifMatch) t.headers = { 'If-Match': opts.ifMatch }
+    if (opts.headers || opts.ifMatch) {
+      const headers = new Headers(opts.headers)
+      if (opts.ifMatch) headers.set('If-Match', opts.ifMatch)
+      t.headers = headers
+    }
     return t
   }
 
@@ -726,7 +736,7 @@ export function createODataService(config: ODataServiceConfig): ODataService {
     return notifyingWrite(() => apiDeleteQuiet<T>(path, opts), opts)
   }
 
-  async function fetchRaw(url: string, opts?: Pick<ODataRequestOptions, 'signal'>): Promise<HttpResponse> {
+  async function fetchRaw(url: string, opts?: Pick<ODataRequestOptions, 'signal' | 'headers'>): Promise<HttpResponse> {
     return cancellable(opts, () => client.get(url, transport(opts)))
   }
 

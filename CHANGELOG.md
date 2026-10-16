@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+
+- `ODataRequestOptions.headers`: headers for one call — a purpose mark («this read is an export»), a tracing id, an
+  `Idempotency-Key`. Added to every page of a read that follows `@odata.nextLink`; a service default
+  (`Content-Type`) gives way to it, and `ifMatch` decides `If-Match`. `fetchRaw` takes it too.
+
 ### Changed
 
 - Console diagnostics begin with `[@iyulab/enterprise]`, so a message in a console shared by several packages says which one wrote it (several also say what to do next).

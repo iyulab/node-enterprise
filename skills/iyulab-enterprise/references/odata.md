@@ -205,11 +205,23 @@ The tag is opaque — do not read, compare or compute the row-version field; pas
 `odataGetById` copies the `ETag` header into `@odata.etag` when the body has none, so `etagOf`
 is the one way to read it. Without `ifMatch` a write is unconditional, as before.
 
+## Per-call headers (`headers`)
+
+A header that means something for one call only — a purpose mark («this read is an export»), a tracing id, an
+`Idempotency-Key` on a write — goes in `headers`. It is added to the request (every page of an `odataGet` that
+follows `@odata.nextLink`), wins over a header the service sets by default (`Content-Type`), and loses to `ifMatch`
+for `If-Match`. The next call does not carry it.
+
+```ts
+const rows = await svc.apiGet('access-logs?from=2026-10-01', { headers: { 'X-Access-Purpose': 'export' } })
+await svc.odataPost('Payments', body, { headers: { 'Idempotency-Key': crypto.randomUUID() } })
+```
+
 ## `fetchRaw(url, opts?)`
 
 Returns the `HttpResponse` from `@iyulab/http-client` **as is**: it does not throw on
-non-2xx and does not call `onUnauthorized`. Its only option is `signal` — aborting it rejects with
-`signal.reason`, like every other method. Use it for hand-built URLs such as CSV export or a
+non-2xx and does not call `onUnauthorized`. Its options are `signal` — aborting it rejects with
+`signal.reason`, like every other method — and `headers`. Use it for hand-built URLs such as CSV export or a
 reachability probe:
 
 ```ts
