@@ -121,8 +121,8 @@ export class ApiConfig {
         // Try to detect from environment
         try {
             // Vite
-            if (typeof import.meta !== 'undefined' && (import.meta as any).env?.DEV !== undefined) {
-                return (import.meta as any).env.DEV;
+            if (typeof import.meta !== 'undefined' && import.meta.env?.DEV !== undefined) {
+                return import.meta.env.DEV;
             }
         } catch {
             // ignore
