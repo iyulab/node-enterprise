@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **`u-list-page`'s `filters` region lines up items that are not controls.** A toggle (a checkbox, «include archived») or a
+  short text sat on the region's bottom edge, so its middle landed below the middle of the buttons next to it (about
+  6–9px, by the density). Fields (an input, a select, a date picker) still share one bottom edge with the buttons; buttons,
+  toggles and text now share one text baseline, so a toggle stands on the button's text line at any density — no height
+  to copy. An app that padded its toggle to the button's height can drop that padding.
+
 ## [0.35.0] - 2026-10-16
 
 ### Added

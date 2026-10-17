@@ -28,6 +28,12 @@ export const styles = css`
     align-items: flex-end;
     gap: var(--list-page-gap, var(--u-space-md, 12px));
   }
+  /* 칸(입력 상자를 가진 컨트롤)은 아래 끝에 선다. 그 밖의 항목 — 단추 · 체크박스 토글 · 짧은 글자 — 은 한 글자 기준선 묶음이다:
+     묶음의 가장 깊은 항목(단추)이 아래 끝에 닿고 나머지는 그 단추의 글자 줄에 선다. 높이 리터럴 없이 밀도를 따른다.
+     ⚠칸 전부를 기준선 묶음에 넣지 않는다 — 입력과 단추는 글자 아래의 깊이가 달라 글자를 맞추면 아래 끝이 어긋난다(실측 2.8px). */
+  [part~='filters'] ::slotted(:not(u-input, u-select, u-textarea, u-date-picker, u-date-range-picker, u-file-input, u-record-picker, u-field, [label])) {
+    align-self: last baseline;
+  }
 
   [part~='view'] {
     display: flex;
