@@ -216,7 +216,7 @@ describe('u-list-page — 검색', () => {
     for (const select of selects) {
       await select.updateComplete;
       select.addEventListener('search', (e) => heard.push((e as CustomEvent<{ query: string }>).detail.query));
-      const box = select.shadowRoot!.querySelector<HTMLInputElement>('.search-input input')!;
+      const box = select.shadowRoot!.querySelector<HTMLInputElement>('input.search')!;
       box.value = 'ac';
       box.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
     }
