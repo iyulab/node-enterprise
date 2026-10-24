@@ -77,10 +77,14 @@ export const styles = css`
   :host([appearance='card']) [part~='status'] {
     padding: var(--u-space-lg, 16px);
   }
-  /* 자기 테두리를 그리는 뷰(flex-table · u-rich-table)는 면 안에서 그 테두리를 걷는다 — 이중 테두리를 막는다. */
+  /* 자기 테두리를 그리는 뷰(flex-table · u-rich-table)는 면 안에서 그 테두리를 걷는다 — 이중 테두리를 막는다.
+     두 표는 상자를 섀도 안에 그리므로(문서 리셋에 지지 않게) 호스트의 border 로는 닿지 않는다 — 각자 읽는 외곽선 속성으로. */
   :host([appearance='card']) ::slotted([slot='view']) {
     border: 0;
     border-radius: 0;
     box-shadow: none;
+    --ft-outline: none;
+    --dc-table-outline: none;
+    --dc-table-radius: 0;
   }
 `;

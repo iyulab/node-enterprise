@@ -14,7 +14,7 @@ import type { UListPage } from '../../src/list/UListPage';
  */
 afterEach(() => document.body.replaceChildren());
 
-/** 자기 테두리를 «호스트 규칙» 으로 그리는 뷰 — flex-table · u-rich-table 이 그렇게 그린다(인라인 style 이 아니다). */
+/** 자기 테두리를 «호스트 규칙» 으로 그리는 뷰 — 우리 표가 아닌 뷰의 일반형(인라인 style 이 아니다). */
 class FramedView extends HTMLElement {
   constructor() {
     super();
@@ -23,6 +23,21 @@ class FramedView extends HTMLElement {
   }
 }
 if (!customElements.get('framed-view')) customElements.define('framed-view', FramedView);
+
+/**
+ * 상자를 섀도 «안» 에 그리는 뷰 — flex-table(`--ft-outline`) · u-rich-table(`--dc-table-outline` · `--dc-table-radius`)이
+ * 그렇게 그린다(문서 리셋에 지지 않게). 호스트의 border 로는 닿지 않아 그 속성으로 걷는다.
+ */
+class InnerFramedView extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' }).innerHTML =
+      '<style>:host { display: block; height: 100px; } .ft { border: var(--ft-outline, 3px solid red); }'
+      + ' .dc { border: var(--dc-table-outline, 3px solid red); border-radius: var(--dc-table-radius, 6px); }</style>'
+      + '<div class="ft">rows</div><div class="dc">rows</div>';
+  }
+}
+if (!customElements.get('inner-framed-view')) customElements.define('inner-framed-view', InnerFramedView);
 
 async function mount(markup: string): Promise<UListPage> {
   document.body.innerHTML = markup;
@@ -102,6 +117,22 @@ describe('u-list-page appearance="card"', () => {
     const page = await mount(LIST('appearance="card"'));
     const view = page.querySelector('[slot="view"]') as HTMLElement;
     expect(getComputedStyle(view).borderTopWidth).toBe('0px');
+  });
+
+  it('🔴a view that draws its box inside its shadow root loses it too (flex-table · u-rich-table)', async () => {
+    const page = await mount(LIST('appearance="card"').replace(/framed-view/g, 'inner-framed-view'));
+    const view = page.querySelector('[slot="view"]') as HTMLElement;
+    const ft = getComputedStyle(view.shadowRoot!.querySelector('.ft')!);
+    const dc = getComputedStyle(view.shadowRoot!.querySelector('.dc')!);
+    expect(ft.borderTopWidth).toBe('0px');
+    expect(dc.borderTopWidth).toBe('0px');
+    expect(dc.borderTopLeftRadius).toBe('0px');
+  });
+
+  it('NEGATIVE plain keeps the inner box of a view that draws it in its shadow root', async () => {
+    const page = await mount(LIST().replace(/framed-view/g, 'inner-framed-view'));
+    const view = page.querySelector('[slot="view"]') as HTMLElement;
+    expect(getComputedStyle(view.shadowRoot!.querySelector('.ft')!).borderTopWidth).toBe('3px');
   });
 
   it('NEGATIVE plain keeps the old stack — no surface box, the host gap between regions, the view keeps its border', async () => {

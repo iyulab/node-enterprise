@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **A card `u-list-page` keeps one frame around a flex-table or u-rich-table view.** Both tables now draw their
+  outline inside their shadow root (so a page-wide CSS reset cannot strip it), where the card's rule that removed a
+  view's own border no longer reached — the table's outline came back inside the card's. The card now also sets the
+  tables' outline properties (`--ft-outline`, `--dc-table-outline`, `--dc-table-radius`) on its view.
+
 ## [0.35.1] - 2026-10-17
 
 ### Fixed
