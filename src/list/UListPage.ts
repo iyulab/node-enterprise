@@ -14,6 +14,8 @@ export type ListPageAppearance = 'plain' | 'card';
 const BOUND_SLOTS = ['view', 'pager'] as const;
 /** 뷰 어휘 경고를 이미 낸 요소 — 같은 요소에 두 번 말하지 않는다. */
 const warnedVocabulary = new WeakSet<Element>();
+/** 그려지지 않는 자식 경고를 이미 낸 요소. */
+const warnedUnslotted = new WeakSet<Element>();
 /**
  * 같은 이름 `search {query}` 를 «목록 검색» 이 아닌 뜻으로 내는 요소 — 그 이벤트는 자기 선택지를 거르는 질의다
  * (`u-select searchable` 은 글자를 칠 때마다 낸다). 필터 영역에 놓여도 목록 검색어가 되지 않는다.
@@ -113,11 +115,33 @@ export class UListPage extends UElement {
   connectedCallback(): void {
     super.connectedCallback();
     this.attachSource();
+    this.childWatch.observe(this, { childList: true, attributes: true, subtree: false, attributeFilter: ['slot'] });
+    this.warnUnslotted();
   }
 
   disconnectedCallback(): void {
+    this.childWatch.disconnect();
     this.detachSource();
     super.disconnectedCallback();
+  }
+
+  /** 자식이 들어오거나 `slot` 이 바뀌면 — 골격이 그리지 않는 자식을 잰다. */
+  private childWatch = new MutationObserver(() => this.warnUnslotted());
+
+  /**
+   * 골격은 이름 있는 영역만 그린다(기본 슬롯이 없다) — `slot` 이 없거나 모르는 이름인 자식은 화면에 나오지 않고 오류도 없다.
+   * 골격 안에 슬롯 없이 둔 서랍 · 대화상자는 `open` 이 되어도 보이지 않는다. 요소마다 한 번 말한다.
+   */
+  private warnUnslotted() {
+    for (const el of this.children) {
+      const slot = el.getAttribute('slot');
+      if ((slot !== null && (SLOTS as readonly string[]).includes(slot)) || warnedUnslotted.has(el)) continue;
+      warnedUnslotted.add(el);
+      console.warn(
+        `[@iyulab/enterprise] u-list-page: <${el.localName}> ${slot === null ? 'has no slot' : `has slot="${slot}", which the page does not have`}, so it is never `
+        + `rendered — give it one of ${SLOTS.map((n) => `"${n}"`).join(', ')}, or put it beside the u-list-page (a drawer or dialog can sit anywhere).`,
+      );
+    }
   }
 
   protected willUpdate(changed: PropertyValues<this>): void {

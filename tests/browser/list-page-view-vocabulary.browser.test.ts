@@ -105,3 +105,22 @@ describe('u-list-page — a layout around the view', () => {
     expect(page.matches(':state(selected)')).toBe(true);
   });
 });
+
+describe('u-list-page — a child it does not render', () => {
+  it('warns once for a child without a slot or with a slot the page does not have', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const page = await mount('<vocab-view slot="view"></vocab-view><plain-wrapper></plain-wrapper><div slot="filter"></div>');
+    const messages = vocabWarnings(warn);
+    expect(messages.filter((m) => m.includes('<plain-wrapper> has no slot'))).toHaveLength(1);
+    expect(messages.filter((m) => m.includes('<div> has slot="filter"'))).toHaveLength(1);
+    page.appendChild(document.createElement('aside'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(vocabWarnings(warn).filter((m) => m.includes('<aside> has no slot'))).toHaveLength(1);
+  });
+
+  it('NEGATIVE children in the page\'s own slots stay quiet', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await mount('<div slot="header"></div><div slot="filters"></div><vocab-view slot="view"></vocab-view><vocab-pager slot="pager"></vocab-pager><div slot="empty"></div>');
+    expect(vocabWarnings(warn)).toEqual([]);
+  });
+});

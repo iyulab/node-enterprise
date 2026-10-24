@@ -12,6 +12,10 @@
 
 ### Fixed
 
+- **`u-list-page` says when a child is never rendered.** The page draws only its named slots, so a child without
+  `slot` — or with a name the page does not have (`slot="filter"`) — was silently dropped: a drawer placed inside the
+  page never showed when opened. The page now logs one `[@iyulab/enterprise]` warning per such child, naming it and the
+  slots it has.
 - **`u-list-page` says when the source cannot reach a slotted element.** A wrapper in `slot="view"` (a layout around
   the table) or `slot="pager"` has no `data` / `page` to write, so the pager reported a count while the table stayed
   empty, with no error. The skeleton now logs one `[@iyulab/enterprise]` warning naming the element; a custom element
