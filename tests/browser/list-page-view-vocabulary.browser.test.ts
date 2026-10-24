@@ -36,7 +36,7 @@ async function mount(markup: string): Promise<UListPage> {
   return page;
 }
 
-const vocabWarnings = (spy: ReturnType<typeof vi.spyOn>) =>
+const vocabWarnings = (spy: { mock: { calls: unknown[][] } }) =>
   spy.mock.calls.map((c) => String(c[0])).filter((m) => m.startsWith('[@iyulab/enterprise] u-list-page:'));
 
 afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); });
@@ -75,5 +75,33 @@ describe('u-list-page — a slotted element that cannot take the source', () => 
     customElements.define('late-view', class extends HTMLElement { data: unknown[] = []; });
     await new Promise((r) => setTimeout(r, 30));
     expect(vocabWarnings(warn)).toEqual([]);
+  });
+});
+
+describe('u-list-page — a layout around the view', () => {
+  it('binds the view inside a wrapper in the view slot, and stays quiet', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await mount('<plain-wrapper slot="view"><vocab-view></vocab-view><div slot="detail">preview</div></plain-wrapper>');
+    const view = document.querySelector('vocab-view') as VocabView;
+    expect(view.data).toEqual([{ id: 1 }]);
+    expect(view.totalCount).toBe(1);
+    expect(vocabWarnings(warn)).toEqual([]);
+  });
+
+  it('waits for a view inside the wrapper that is defined after it was slotted', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await mount('<plain-wrapper slot="view"><later-view></later-view></plain-wrapper>');
+    class LaterView extends HTMLElement { data: unknown[] = []; }
+    customElements.define('later-view', LaterView);
+    await new Promise((r) => setTimeout(r, 30));
+    expect((document.querySelector('later-view') as LaterView).data).toEqual([{ id: 1 }]);
+    expect(vocabWarnings(warn)).toEqual([]);
+  });
+
+  it('a selection inside the wrapper still lights the selected state', async () => {
+    const page = await mount('<plain-wrapper slot="view"><vocab-view></vocab-view></plain-wrapper>');
+    document.querySelector('vocab-view')!.dispatchEvent(new CustomEvent('selection-change', { detail: { selectedIds: [1] }, bubbles: true, composed: true }));
+    await page.updateComplete;
+    expect(page.matches(':state(selected)')).toBe(true);
   });
 });

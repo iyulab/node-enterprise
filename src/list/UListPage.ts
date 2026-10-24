@@ -53,7 +53,7 @@ type SlotName = typeof SLOTS[number];
  * @slot filters - 화면 고유 검색 조건 — `search {query}` 를 내면 소스 검색어가 된다
  * @slot applied - 지금 걸린 조건(칩) — 비면 영역째 접힌다
  * @slot toolbar - 뷰 위의 동작 줄
- * @slot view - 뷰 요소(여럿이면 `view-name` 으로 고른다)
+ * @slot view - 뷰 요소(여럿이면 `view-name` 으로 고른다) — 뷰를 감싼 레이아웃도 된다(소스는 그 안의 첫 뷰에)
  * @slot pager - 페이저(예: `u-pagination`) — 소스에 묶인다
  * @slot empty - 결과가 없을 때 뷰 대신 보일 것
  * @slot error - 소스가 오류일 때 뷰 대신 보일 것
@@ -243,30 +243,56 @@ export class UListPage extends UElement {
     }
     for (const el of now) {
       if (this.bound.has(el)) continue;
-      this.bound.set(el, bindSource(source, el));
-      this.checkVocabulary(el);
+      const target = this.bindTarget(el);
+      if (target === undefined) {
+        // 슬롯 요소나 그 안의 커스텀 요소가 아직 정의되지 않았다 — 정의된 뒤 다시 고른다(업그레이드 전에는 속성이 없다).
+        this.bound.set(el, () => {});
+        void Promise.all(this.undefinedTags(el).map((t) => customElements.whenDefined(t))).then(() => {
+          if (!this.bound.has(el)) return;
+          this.bound.delete(el);
+          this.syncBindings();
+        });
+        continue;
+      }
+      this.bound.set(el, bindSource(source, target ?? el));
+      if (target === null) this.warnVocabulary(el);
     }
   }
 
   /**
-   * 묶은 요소가 뷰 어휘를 말하는가 — 뷰는 `data`, 페이저는 `page` 를 받아야 한다. 감싸개(레이아웃 등)를 슬롯에 넣으면 소스가
-   * 그 요소에 아무것도 쓰지 못해 표는 빈 채로, 페이저는 건수를 말한 채로 남는다 — 오류가 없어 아무도 모른다. 한 번 말한다.
-   * 아직 정의되지 않은 커스텀 요소는 정의된 뒤에 잰다(업그레이드 전에는 속성이 없다).
+   * 소스를 꽂을 요소 — 슬롯 요소 자신이 뷰 어휘를 말하면 그것, 아니면 그 안(라이트 DOM)의 첫 뷰. 레이아웃이 뷰를 감싸고 슬롯에
+   * 들어온 구성(`<u-master-detail-layout slot="view">` 안의 표 + `slot="detail"` 미리보기)에서 미리보기가 필터 줄이 아니라
+   * 뷰의 높이부터 선다. 뷰는 쓸 수 있는 `data`, 페이저는 `page`.
+   * @returns 찾은 요소 · `null`(없다 — 경고) · `undefined`(아직 정의되지 않은 커스텀 요소가 있어 판정하지 않는다)
    */
-  private checkVocabulary(el: Element) {
-    if (warnedVocabulary.has(el)) return;
-    const tag = el.localName;
-    if (tag.includes('-') && !customElements.get(tag)) {
-      void customElements.whenDefined(tag).then(() => { if (this.bound.has(el)) this.checkVocabulary(el); });
-      return;
+  private bindTarget(el: Element): Element | null | undefined {
+    const key = el.getAttribute('slot') === 'pager' ? 'page' : 'data';
+    if (writable(el, key)) return el;
+    for (const d of el.querySelectorAll('*')) if (writable(d, key)) return d;
+    return this.undefinedTags(el).length ? undefined : null;
+  }
+
+  /** 요소와 그 안에서 아직 정의되지 않은 커스텀 요소 이름. */
+  private undefinedTags(el: Element): string[] {
+    const tags = new Set<string>();
+    for (const e of [el, ...el.querySelectorAll('*')]) {
+      if (e.localName.includes('-') && !customElements.get(e.localName)) tags.add(e.localName);
     }
+    return [...tags];
+  }
+
+  /**
+   * 슬롯 요소에도 그 안에도 뷰 어휘가 없다 — 소스가 아무것도 쓰지 못해 표는 빈 채로, 페이저는 건수를 말한 채로 남는다. 오류가
+   * 없어 아무도 모르므로 한 번 말한다.
+   */
+  private warnVocabulary(el: Element) {
+    if (warnedVocabulary.has(el)) return;
+    warnedVocabulary.add(el);
     const slot = el.getAttribute('slot');
     const key = slot === 'pager' ? 'page' : 'data';
-    if (writable(el, key)) return;
-    warnedVocabulary.add(el);
     console.warn(
-      `[@iyulab/enterprise] u-list-page: <${tag}> in slot="${slot}" has no writable \`${key}\`, so the list source cannot reach it — `
-      + `put the ${slot === 'pager' ? 'pager' : 'table or u-data-view'} itself in the slot, and wrap the whole u-list-page in a layout instead.`,
+      `[@iyulab/enterprise] u-list-page: <${el.localName}> in slot="${slot}" has no writable \`${key}\`, and neither does anything inside it, `
+      + `so the list source cannot reach it — put a ${slot === 'pager' ? 'pager' : 'table or u-data-view'} in the slot (a layout around it is fine).`,
     );
   }
 

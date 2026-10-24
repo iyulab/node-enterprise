@@ -2,13 +2,20 @@
 
 ## [Unreleased]
 
+### Added
+
+- **A layout can sit in `u-list-page`'s `slot="view"` around the table.** When the slotted element does not take the
+  source itself, the skeleton binds the first view inside it, so `<u-master-detail-layout slot="view">` with the table
+  and a `slot="detail"` preview works: the preview starts level with the table, below the filters and toolbar, rather
+  than at the top of the screen. Selection still reaches the skeleton's selected state. The warning below now fires
+  only when neither the slotted element nor anything inside it can take the source.
+
 ### Fixed
 
 - **`u-list-page` says when the source cannot reach a slotted element.** A wrapper in `slot="view"` (a layout around
   the table) or `slot="pager"` has no `data` / `page` to write, so the pager reported a count while the table stayed
   empty, with no error. The skeleton now logs one `[@iyulab/enterprise]` warning naming the element; a custom element
-  slotted before it is defined is judged once it is defined. The list guide shows the list-with-preview layout
-  (the layout wraps the skeleton).
+  slotted before it is defined is judged once it is defined. The list guide shows the list-with-preview layout.
 
 ## [0.35.2] - 2026-10-24
 
