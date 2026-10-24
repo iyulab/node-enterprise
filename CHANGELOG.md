@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **`u-list-page` says when the source cannot reach a slotted element.** A wrapper in `slot="view"` (a layout around
+  the table) or `slot="pager"` has no `data` / `page` to write, so the pager reported a count while the table stayed
+  empty, with no error. The skeleton now logs one `[@iyulab/enterprise]` warning naming the element; a custom element
+  slotted before it is defined is judged once it is defined. The list guide shows the list-with-preview layout
+  (the layout wraps the skeleton).
+
 ## [0.35.2] - 2026-10-24
 
 ### Fixed

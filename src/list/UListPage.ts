@@ -2,6 +2,7 @@ import { html, type PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { UElement } from '@iyulab/components/dist/components/UElement.js';
 import { bindSource, type ViewSource } from './bindSource.js';
+import { writable } from './viewProperty.js';
 import { styles } from './UListPage.styles.js';
 
 /** 목록이 지금 보이는 상태 — 호스트의 `status` 속성으로 반영된다. */
@@ -11,6 +12,8 @@ export type ListPageAppearance = 'plain' | 'card';
 
 /** 소스가 묶이는 영역 — 뷰와 페이저. 나머지 영역(머리 · 필터 · 툴바)은 소스를 받지 않는다. */
 const BOUND_SLOTS = ['view', 'pager'] as const;
+/** 뷰 어휘 경고를 이미 낸 요소 — 같은 요소에 두 번 말하지 않는다. */
+const warnedVocabulary = new WeakSet<Element>();
 /**
  * 같은 이름 `search {query}` 를 «목록 검색» 이 아닌 뜻으로 내는 요소 — 그 이벤트는 자기 선택지를 거르는 질의다
  * (`u-select searchable` 은 글자를 칠 때마다 낸다). 필터 영역에 놓여도 목록 검색어가 되지 않는다.
@@ -238,7 +241,33 @@ export class UListPage extends UElement {
     for (const [el, unbind] of this.bound) {
       if (!now.has(el)) { unbind(); this.bound.delete(el); }
     }
-    for (const el of now) if (!this.bound.has(el)) this.bound.set(el, bindSource(source, el));
+    for (const el of now) {
+      if (this.bound.has(el)) continue;
+      this.bound.set(el, bindSource(source, el));
+      this.checkVocabulary(el);
+    }
+  }
+
+  /**
+   * 묶은 요소가 뷰 어휘를 말하는가 — 뷰는 `data`, 페이저는 `page` 를 받아야 한다. 감싸개(레이아웃 등)를 슬롯에 넣으면 소스가
+   * 그 요소에 아무것도 쓰지 못해 표는 빈 채로, 페이저는 건수를 말한 채로 남는다 — 오류가 없어 아무도 모른다. 한 번 말한다.
+   * 아직 정의되지 않은 커스텀 요소는 정의된 뒤에 잰다(업그레이드 전에는 속성이 없다).
+   */
+  private checkVocabulary(el: Element) {
+    if (warnedVocabulary.has(el)) return;
+    const tag = el.localName;
+    if (tag.includes('-') && !customElements.get(tag)) {
+      void customElements.whenDefined(tag).then(() => { if (this.bound.has(el)) this.checkVocabulary(el); });
+      return;
+    }
+    const slot = el.getAttribute('slot');
+    const key = slot === 'pager' ? 'page' : 'data';
+    if (writable(el, key)) return;
+    warnedVocabulary.add(el);
+    console.warn(
+      `[@iyulab/enterprise] u-list-page: <${tag}> in slot="${slot}" has no writable \`${key}\`, so the list source cannot reach it — `
+      + `put the ${slot === 'pager' ? 'pager' : 'table or u-data-view'} itself in the slot, and wrap the whole u-list-page in a layout instead.`,
+    );
   }
 
   /**

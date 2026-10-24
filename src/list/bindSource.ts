@@ -10,6 +10,8 @@
  * 이벤트를 내지 않는 요소에는 리스너가 그냥 아무 일도 하지 않는다.
  */
 
+import { writable } from './viewProperty.js';
+
 /** 정렬 기준 — 두 표와 소스가 주고받는 모양. */
 export interface ViewSortCriterion {
   key: string;
@@ -44,14 +46,6 @@ export interface ViewSource<T = unknown> {
  */
 export const VIEW_PROPERTIES = ['data', 'totalCount', 'loading', 'error', 'sortCriteria', 'page', 'pageSize'] as const;
 
-/** 요소에 `key` 가 있고 쓸 수 있는가 — 데이터 속성(쓰기 가능)이거나 setter 를 가진 접근자. 프로토타입 사슬을 따라간다. */
-function writable(target: object, key: string): boolean {
-  for (let o: object | null = target; o; o = Object.getPrototypeOf(o)) {
-    const d = Object.getOwnPropertyDescriptor(o, key);
-    if (d) return 'value' in d ? d.writable === true : typeof d.set === 'function';
-  }
-  return false;
-}
 
 /**
  * `source` 를 `view` 에 묶는다. 돌려주는 함수가 묶음을 푼다(구독 해지 · 리스너 제거).

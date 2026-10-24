@@ -63,7 +63,8 @@ page.source = createODataSource<Order>('/api/orders', { pageSize: 20 });
 
 | Part of the screen | How |
 |---|---|
-| Binding | every element in `slot="view"` and `slot="pager"` is bound with `bindSource` — including views added later |
+| Binding | every element in `slot="view"` and `slot="pager"` is bound with `bindSource` — including views added later. The slotted element itself must take the source: a view needs a writable `data`, a pager a writable `page`. A wrapper there (a layout around the table) receives nothing — the skeleton logs one `[@iyulab/enterprise]` warning naming it |
+| List with a side preview | wrap the whole skeleton — `<u-master-detail-layout>` with `u-list-page` as its default (master) content and the preview in `slot="detail"` — rather than putting the layout in `slot="view"` |
 | Table ↔ cards | give each view a `view-name` and set `view` on the skeleton; the others get `hidden` (the skeleton owns `hidden` on its views). Without `view` the first view shows. Hidden views stay bound, so switching is instant |
 | Search | a `search { query }` from the header, filters or toolbar becomes `setSearch(query)`. The same-named event a searchable `u-select` fires while it narrows its own options is not a list search — a searchable select can sit in `filters` |
 | Empty and error | `slot="error"` replaces the view and the pager while the source has an error; `slot="empty"` while the result is empty. Leave a slot out and the view shows its own message (both tables draw one) |
