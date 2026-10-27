@@ -333,7 +333,7 @@ window.addEventListener('unhandledrejection', (ev) => {
 | 서버 주도 페이징 — `@odata.nextLink`(상대·절대) | 구현 | `odataGet` 은 끝까지 따라가고, `odataGetPage` 는 `nextLink` 를 준다. 서비스 오리진 밖 · 이미 읽은 링크로의 순환은 던진다 |
 | `nextLink` 를 불투명하게 따라가기(Protocol §11.2.6.7) | 구현 | 서버가 쓴 쿼리가 바이트 그대로 나간다(`@iyulab/http-client` 0.10.3 이상 — 범위 `^0.10.0` 이면 재설치로 받는다) |
 | `$count=true` → `@odata.count` · `odataCount` | 구현 | `odataCount` 는 `$top=0&$count=true` 로 행 없이 건수만 |
-| 오류 봉투 — `error.code`·`message`·`details[]`(`code`·`message`·`target`) | 구현 | `ApiError.message`·`ApiError.code`·`ApiError.details` · `innererror` 는 해석하지 않는다(서버의 디버깅용이지 계약이 아니다) — 원문 `body` 에만 있고, `body` 는 열거되지 않아 에러를 직렬화해도 따라 나가지 않는다 |
+| 오류 봉투 — `error.code`·`message`·`details[]`(`code`·`message`·`target`) · RFC 9457 problem details(`detail` → `title` 이 문장, 최상위 `code`) | 구현 | `ApiError.message`·`ApiError.code`·`ApiError.details` · `innererror` 는 해석하지 않는다(서버의 디버깅용이지 계약이 아니다) — 원문 `body` 에만 있고, `body` 는 열거되지 않아 에러를 직렬화해도 따라 나가지 않는다 |
 | 생성 201 · 수정/삭제 204 No Content | 구현 | 빈 바디를 파싱하지 않는다 |
 | 키 리터럴(URL Conventions §4.3.1) | 호출자 | `id` 는 URL 에 쓰이는 리터럴 그대로다 — GUID·숫자는 그대로, 문자열 키는 호출자가 `'…'` 로 감싸고 `'` 를 `''` 로. 클라이언트는 메타데이터 없이 둘을 가를 수 없다 |
 | 낙관적 동시성 — ETag · `If-Match` · 412 | 미구현 | 서버 지원 확인 뒤에 연다 |
@@ -379,7 +379,7 @@ if (hasPermission('orders.write')) { /* 저장 버튼 노출 */ }
 |--------|------|
 | `baseUrl` | 상대 URL 앞에 붙일 오리진 (기본 `''` = same-origin) |
 | `credentials` | fetch `credentials` 모드 (기본 `'same-origin'` — 쿠키 세션) |
-| `extractLoginError` | 로그인 실패(non-401) 응답 바디에서 사용자 대면 메시지 추출 오버라이드 (기본: 봉투 `error.message` → `message` → `Message`) |
+| `extractLoginError` | 로그인 실패(non-401) 응답 바디에서 사용자 대면 메시지 추출 오버라이드 (기본: 봉투 `error.message` → `message` → `Message` → problem details `detail` → `title`) |
 | `permissionStore` | 권한 자동 갱신 대상 store (기본 `defaultPermissionStore`) — 격리가 필요하면 `createPermissionStore()`로 별도 store를 만들어 주입 |
 | `loginUser` | 로그인 성공 뒤 세션 사용자를 어디서 얻는가 — `'body'`(기본: 로그인 응답 본문) · `'me'`(`meUrl` 재조회 — 로그인 응답이 `{ Success, User, Token }` 같은 봉투인 서버). `LoginResult` 성공에는 응답 원문 `body` 도 실린다 |
 

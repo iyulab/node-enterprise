@@ -1,12 +1,12 @@
 /**
  * 실패 응답 본문 읽기 — OData v4 오류 봉투(`error.message`·`error.code`·`error.details`)와 커스텀 REST
- * 최상위 관례(`message`·`Message`·`code`·`Code`)를 한 규칙으로 읽는다. 데이터 서비스와 인증 클라이언트가 같은
+ * 최상위 관례(`message`·`Message`·`code`·`Code`), RFC 9457 problem details(`detail` → `title`)를 한 규칙으로 읽는다. 데이터 서비스와 인증 클라이언트가 같은
  * 본문에서 같은 `ApiError` 필드를 얻게 하려는 내부 모듈이다(패키지 엔트리로 내보내지 않는다).
  */
 import type { ApiErrorDetail, ServerMessages } from './ODataService'
 
 export interface ErrorEnvelope {
-  /** 서버가 준 문장 — 봉투 `error.message` → 최상위 `message` → `Message` 순. */
+  /** 서버가 준 문장 — 봉투 `error.message` → 최상위 `message` → `Message` → problem details `detail` → `title` 순. */
   rawMessage?: string
   /** 거절 코드 — 봉투 `error.code` → 최상위 `code` → `Code` 순, 빈 문자열은 «없음». */
   code?: string
@@ -33,7 +33,8 @@ export function readErrorEnvelope(body: unknown): ErrorEnvelope {
   if (!body || typeof body !== 'object') return {}
   const b = body as Record<string, unknown>
   const errorObj = b.error && typeof b.error === 'object' ? (b.error as Record<string, unknown>) : undefined
-  const rawVal = errorObj?.message ?? b.message ?? b.Message
+  // problem details 는 이 일의 문장(`detail`)이 종류의 이름(`title`)보다 구체적이다.
+  const rawVal = [errorObj?.message, b.message, b.Message, b.detail, b.title].find(v => typeof v === 'string' && v)
   const rawCode = errorObj?.code ?? b.code ?? b.Code
   return {
     rawMessage: typeof rawVal === 'string' ? rawVal : undefined,

@@ -127,3 +127,23 @@ describe('ApiError — auth client', () => {
     expect(r.error.body).toBeUndefined()
   })
 })
+
+describe('ApiError — RFC 9457 problem details', () => {
+  it('a 400 problem body gives its detail as the message and its code as `code`', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    const body = { type: 'about:blank', title: 'Invalid value', status: 400, detail: 'Quantity must be positive.', code: 'CheckViolation' }
+    queue.push(new Response(JSON.stringify(body), { status: 400, headers: { 'content-type': 'application/problem+json' } }))
+    const err = (await svc.odataPostQuiet('Orders', { Quantity: -1 }).catch((e: unknown) => e)) as ApiError
+    expect(err).toBeInstanceOf(ApiError)
+    expect(err.status).toBe(400)
+    expect(err.code).toBe('CheckViolation')
+    expect(err.message).toContain('Quantity must be positive.')
+  })
+
+  it('falls back to the title when there is no detail', async () => {
+    const svc = createODataService({ baseUrl: BASE })
+    queue.push(json({ title: 'Conflict with the stored rows', status: 409 }, 409))
+    const err = (await svc.odataPostQuiet('Orders', {}).catch((e: unknown) => e)) as ApiError
+    expect(err.message).toContain('Conflict with the stored rows')
+  })
+})

@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **A rejection in RFC 9457 problem-details form gives its sentence to `ApiError.message`.** The reader took the
+  sentence from the OData envelope (`error.message`) or a top-level `message` only; a server that answers with
+  `application/problem+json` (`title`, `detail`) left the message to the status-code fallback. `detail` is read,
+  then `title` — after the existing places, so nothing that read before reads differently. Login failures read the same way.
+
 ## [0.36.0] - 2026-10-25
 
 ### Added

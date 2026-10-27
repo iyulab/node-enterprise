@@ -38,7 +38,7 @@ after creating the service still applies.
 `formatError` receives `{ status, statusText, rawMessage?, code?, details?, body? }`.
 Message resolution order: `formatError` result → server message (if ≤ 200 chars) →
 `messages.http[status]` → `` `${requestFailed} (${status})` ``. The server message is read
-from `error.message`, then top-level `message`, then `Message`. By default (`serverMessages: 'always'`) it is shown
+from `error.message`, then top-level `message`, then `Message`, then RFC 9457 problem details `detail`, then `title`. By default (`serverMessages: 'always'`) it is shown
 — in OData JSON the `code` is a language-independent identifier and the `message` is the human-readable sentence, so a
 category code (`Forbidden`) with a specific sentence is the expected shape. With `'domain-codes'`, a message whose
 `code` only names the HTTP status (`Forbidden` for 403, `NotFound` for 404, `InternalServerError` for 500 …) is treated
