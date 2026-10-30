@@ -31,8 +31,13 @@ export const styles = css`
   /* 칸(입력 상자를 가진 컨트롤)은 아래 끝에 선다. 그 밖의 항목 — 단추 · 체크박스 토글 · 짧은 글자 — 은 한 글자 기준선 묶음이다:
      묶음의 가장 깊은 항목(단추)이 아래 끝에 닿고 나머지는 그 단추의 글자 줄에 선다. 높이 리터럴 없이 밀도를 따른다.
      ⚠칸 전부를 기준선 묶음에 넣지 않는다 — 입력과 단추는 글자 아래의 깊이가 달라 글자를 맞추면 아래 끝이 어긋난다(실측 2.8px). */
-  [part~='filters'] ::slotted(:not(u-input, u-select, u-textarea, u-date-picker, u-date-range-picker, u-file-input, u-record-picker, u-field, [label])) {
+  /* 칸은 컨트롤이 스스로 싣는 공개 표지 :state(field) 로 가린다(components) — 태그 목록을 여기 들지 않는다.
+     긍정형으로 덮는다: Chromium 은 연결 때 붙는 상태에 :not(:state(field)) 를 다시 계산하지 않는다(칸이 기준선에 남는다). */
+  [part~='filters'] ::slotted(*) {
     align-self: last baseline;
+  }
+  [part~='filters'] ::slotted(:state(field)) {
+    align-self: auto;
   }
 
   [part~='view'] {

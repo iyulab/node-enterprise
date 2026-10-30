@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import '@iyulab/components/dist/components/input/UInput.js';
 import '@iyulab/components/dist/components/button/UButton.js';
 import '@iyulab/components/dist/components/checkbox/UCheckbox.js';
+import '@iyulab/components/dist/components/switch/USwitch.js';
+import '@iyulab/components/dist/components/select/USelect.js';
 import '../../src/list-page';
 import type { UListPage } from '../../src/list/UListPage';
 
@@ -25,12 +27,12 @@ afterEach(() => { host.remove(); });
 async function mount(filters: string): Promise<UListPage> {
   // 뷰포트가 좁아 접히지 않게 칸 폭을 줄이고, 토글은 한 줄로 둔다.
   const slotted = filters
-    .replace(/<u-input/g, '<u-input slot="filters" style="inline-size: 100px"')
-    .replace(/<(u-button|label|span)/g, '<$1 slot="filters" style="white-space: nowrap"');
+    .replace(/<(u-input|u-select)/g, '<$1 slot="filters" style="inline-size: 100px"')
+    .replace(/<(u-button|u-switch|label|span)/g, '<$1 slot="filters" style="white-space: nowrap"');
   host.innerHTML = `<u-list-page>${slotted}</u-list-page>`;
   const page = host.querySelector('u-list-page') as UListPage;
   await page.updateComplete;
-  await Promise.all(['u-input', 'u-button', 'u-checkbox'].map((t) => customElements.whenDefined(t)));
+  await Promise.all(['u-input', 'u-select', 'u-button', 'u-checkbox', 'u-switch'].map((t) => customElements.whenDefined(t)));
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await new Promise((r) => setTimeout(r, 50));
   return page;
@@ -72,5 +74,17 @@ describe('u-list-page filters — 줄 맞춤', () => {
     const check = page.querySelector('span')!;
     // 칸의 입력 상자 가운데 근처(칸 전체 높이의 아래쪽 절반)에 선다
     expect(middle(check)).toBeGreaterThan(box(input).top + box(input).height / 2);
+  });
+
+  it('라벨을 단 스위치도 토글이다 — 단추의 글자 줄에 서고, 라벨 있는 고르기 칸은 아래 끝에 선다', async () => {
+    const page = await mount(`
+      <u-select label="Status"></u-select>
+      <u-button>Go</u-button>
+      <u-switch label="Include archived"></u-switch>`);
+    const select = page.querySelector('u-select')!;
+    const button = page.querySelector('u-button')!;
+    const toggle = page.querySelector('u-switch')!;
+    expect(Math.abs(bottom(select) - bottom(button))).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(middle(toggle) - middle(button))).toBeLessThanOrEqual(2);
   });
 });

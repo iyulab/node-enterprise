@@ -9,6 +9,14 @@
   `application/problem+json` (`title`, `detail`) left the message to the status-code fallback. `detail` is read,
   then `title` — after the existing places, so nothing that read before reads differently. Login failures read the same way.
 
+### Fixed
+
+- **A toggle with a `label` in `u-list-page`'s `filters` stands on the buttons' text line.** The region told fields from
+  everything else by a list of tags plus «has a `label` attribute», so `<u-switch label="Include archived">` was taken
+  for a field and sat on the bottom edge, below the buttons' text. Fields are now told by the `:state(field)` they carry
+  themselves (`@iyulab/components` 2.37.0): an input, a select, a date picker, a file input, a record picker or a
+  `u-field` stands on the bottom edge; a labelled checkbox or switch, a button and text share one text line.
+
 ## [0.36.0] - 2026-10-25
 
 ### Added
