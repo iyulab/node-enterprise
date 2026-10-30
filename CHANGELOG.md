@@ -16,6 +16,10 @@
 
 ### Fixed
 
+- **`u-list-page` no longer says a React child «has no slot» when it has one.** Under the React wrappers
+  (`@lit/react`) a child's `slot` is set just after it is inserted, and the page checked at the moment it was connected
+  — every child of a React list screen drew a console warning and the real mistakes were lost among them. The page now
+  checks after the insertion settles and watches its children's `slot` too.
 - **A toggle with a `label` in `u-list-page`'s `filters` stands on the buttons' text line.** The region told fields from
   everything else by a list of tags plus «has a `label` attribute», so `<u-switch label="Include archived">` was taken
   for a field and sat on the bottom edge, below the buttons' text. Fields are now told by the `:state(field)` they carry

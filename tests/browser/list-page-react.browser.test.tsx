@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { ListPage } from '../../src/react';
@@ -48,5 +48,32 @@ describe('ListPage', () => {
     const [table, card] = el.querySelectorAll('[slot="view"]') as NodeListOf<HTMLElement>;
     expect(table.hidden).toBe(true);
     expect(card.hidden).toBe(false);
+  });
+});
+
+describe('ListPage — 자식의 슬롯이 React 래퍼로 들어올 때', () => {
+  it('NEGATIVE: @lit/react 래퍼가 slot 을 삽입 뒤에 주어도 «슬롯 없음» 을 말하지 않는다', async () => {
+    const { createComponent } = await import('@lit/react');
+    const React = await import('react');
+    class SlotProbe extends HTMLElement {}
+    if (!customElements.get('slot-probe')) customElements.define('slot-probe', SlotProbe);
+    const Probe = createComponent({ tagName: 'slot-probe', elementClass: SlotProbe, react: React });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+    await act(async () => {
+      root!.render(
+        <ListPage source={staticSource()}>
+          <Probe slot="filters" />
+          <Probe slot="view" />
+        </ListPage>,
+      );
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    const el = container.querySelector('u-list-page') as UListPage;
+    expect([...el.querySelectorAll('slot-probe')].map((p) => p.getAttribute('slot'))).toEqual(['filters', 'view']);
+    expect(warn.mock.calls.filter(([m]) => String(m).includes('has no slot'))).toEqual([]);
+    warn.mockRestore();
   });
 });

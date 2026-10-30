@@ -115,8 +115,11 @@ export class UListPage extends UElement {
   connectedCallback(): void {
     super.connectedCallback();
     this.attachSource();
-    this.childWatch.observe(this, { childList: true, attributes: true, subtree: false, attributeFilter: ['slot'] });
-    this.warnUnslotted();
+    // 자식의 `slot` 변경도 본다 — `subtree` 가 없으면 관찰은 호스트 자신의 속성뿐이다. React 래퍼(@lit/react)는 `slot` 을
+    // 요소 속성으로 레이아웃 효과에서 — 삽입 «뒤» 에 — 준다: 연결 순간에 재면 모든 자식이 «슬롯 없음» 이었다(참조 앱 실측 여덟 줄).
+    this.childWatch.observe(this, { childList: true, attributes: true, subtree: true, attributeFilter: ['slot'] });
+    // 같은 커밋의 레이아웃 효과가 끝난 뒤에 잰다.
+    queueMicrotask(() => { if (this.isConnected) this.warnUnslotted(); });
   }
 
   disconnectedCallback(): void {
