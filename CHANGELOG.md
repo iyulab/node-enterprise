@@ -8,6 +8,11 @@
   sentence from the OData envelope (`error.message`) or a top-level `message` only; a server that answers with
   `application/problem+json` (`title`, `detail`) left the message to the status-code fallback. `detail` is read,
   then `title` — after the existing places, so nothing that read before reads differently. Login failures read the same way.
+- **`bindSource` carries a table's column filters to the source.** A `filter-change { filters }` from `flex-table` or
+  `u-rich-table` becomes `source.setFilters(filters)`, and the filters the source holds are written back to the table's
+  `filters` — a saved query or a second view shows them. `createODataSource` and `createArraySource` already take
+  filters; a source without `setFilters` is left alone. `ViewSource` gains the optional `setFilters`, `ViewSourceState`
+  the optional `filters` (type `ViewFilters`), and `VIEW_PROPERTIES` lists `filters`.
 
 ### Fixed
 

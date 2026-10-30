@@ -18,6 +18,12 @@ export interface ViewSortCriterion {
   direction: 'asc' | 'desc';
 }
 
+/**
+ * 열 키 → 필터 모델 — 두 표와 소스가 주고받는 모양(flex-table 의 `FilterModels` · u-rich-table 의 `RichTableFilters`).
+ * 모델의 안쪽(`{ type: 'text', … }` · `{ type: 'number', conditions }` …)은 표와 소스가 아는 것이라 여기서는 열지 않는다.
+ */
+export type ViewFilters = Record<string, { type: string; [field: string]: unknown }>;
+
 /** 뷰에 쓰는 소스 상태 — `createODataSource(...).getState()` 와 같은 모양(구조적). */
 export interface ViewSourceState<T = unknown> {
   data: T[];
@@ -28,6 +34,8 @@ export interface ViewSourceState<T = unknown> {
   pageSize: number;
   sortCriteria: ViewSortCriterion[];
   search: string;
+  /** 걸린 필터 — 필터를 받는 소스만 싣는다. */
+  filters?: ViewFilters;
 }
 
 /** `bindSource` 가 읽고 조작하는 소스 — flex-table 의 두 소스가 이 모양이다. */
@@ -38,23 +46,26 @@ export interface ViewSource<T = unknown> {
   setPageSize(size: number): void;
   setSort(criteria: ViewSortCriterion[]): void;
   setSearch(term: string): void;
+  /** 필터를 받는 소스만 — 없으면 뷰의 `filter-change` 를 소스로 보내지 않는다. */
+  setFilters?(filters: ViewFilters): void;
 }
 
 /**
  * 뷰에 쓰는 속성 — 뷰 프로토콜의 정본(루트 `table-vocab-check` 가 같은 목록으로 두 표를 잰다). 요소가 그 속성을 갖고 쓸 수
  * 있을 때만 쓴다.
  */
-export const VIEW_PROPERTIES = ['data', 'totalCount', 'loading', 'error', 'sortCriteria', 'page', 'pageSize'] as const;
+export const VIEW_PROPERTIES = ['data', 'totalCount', 'loading', 'error', 'sortCriteria', 'filters', 'page', 'pageSize'] as const;
 
 
 /**
  * `source` 를 `view` 에 묶는다. 돌려주는 함수가 묶음을 푼다(구독 해지 · 리스너 제거).
  *
- * - **쓴다**: `data` · `totalCount` · `loading` · `error` · `sortCriteria` · `page` · `pageSize` — 요소가 가진 것만, 소스 값이
+ * - **쓴다**: `data` · `totalCount` · `loading` · `error` · `sortCriteria` · `filters` · `page` · `pageSize` — 요소가 가진 것만, 소스 값이
  *   바뀐 때만. 그리고 요소에 `dataMode` 가 있으면 `'server'` 로 — 질의(정렬 · 검색 · 페이지)는 소스가 하므로 뷰가 받은 한
  *   페이지를 다시 거르거나 나누면 안 된다.
  * - **듣는다**: `sort-change {criteria}` → `setSort` · `page-change {page, pageSize?}` → `setPage`(크기가 바뀌었으면
- *   `setPageSize` — 첫 장으로) · `search {query}` → `setSearch`(목록 검색 칸 — `u-input type="search"` 가 검색을 확정할 때 내는 모양).
+ *   `setPageSize` — 첫 장으로) · `search {query}` → `setSearch`(목록 검색 칸 — `u-input type="search"` 가 검색을 확정할 때 내는 모양) ·
+ *   `filter-change {filters}` → `setFilters`(소스가 가질 때 — 표의 열 필터가 질의가 된다).
  *
  * 선택(`selection-change`)과 행 열기(`row-activate`)는 묶지 않는다 — 소스의 것이 아니라 화면의 것이라, 뷰에서 직접 듣는다.
  *
@@ -72,7 +83,7 @@ export function bindSource<T>(source: ViewSource<T>, view: EventTarget): () => v
   const write = () => {
     const state = source.getState() as unknown as Record<string, unknown>;
     for (const key of VIEW_PROPERTIES) {
-      if (!writable(view, key)) continue;
+      if (!writable(view, key) || state[key] === undefined) continue;
       // 마지막으로 쓴 값과 비교한다 — 뷰의 getter 는 복사본을 돌려줄 수 있어(flex-table `sortCriteria`) 뷰 값과 비교하면 매번 쓴다.
       if (last.has(key) && last.get(key) === state[key]) continue;
       last.set(key, state[key]);
@@ -95,10 +106,15 @@ export function bindSource<T>(source: ViewSource<T>, view: EventTarget): () => v
     const query = (e as CustomEvent<{ query?: unknown }>).detail?.query;
     if (typeof query === 'string') source.setSearch(query);
   };
+  const onFilter = (e: Event) => {
+    const filters = (e as CustomEvent<{ filters?: unknown }>).detail?.filters;
+    if (filters && typeof filters === 'object' && source.setFilters) source.setFilters(filters as ViewFilters);
+  };
 
   view.addEventListener('sort-change', onSort);
   view.addEventListener('page-change', onPage);
   view.addEventListener('search', onSearch);
+  view.addEventListener('filter-change', onFilter);
   const unsubscribe = source.subscribe(write);
   write();
 
@@ -107,6 +123,7 @@ export function bindSource<T>(source: ViewSource<T>, view: EventTarget): () => v
     view.removeEventListener('sort-change', onSort);
     view.removeEventListener('page-change', onPage);
     view.removeEventListener('search', onSearch);
+    view.removeEventListener('filter-change', onFilter);
   };
 }
 

@@ -112,8 +112,8 @@ Details: [references/forms-and-helpers.md](./references/forms-and-helpers.md).
 
 `bindSource(source, element)` ties a data source of `@iyulab/flex-table` (`createODataSource`, `createArraySource`) to
 an element that speaks the list view vocabulary — `flex-table`, `u-rich-table`, `u-data-view`, `u-pagination`, a
-search box (`u-input type="search"`). It writes `data`, `totalCount`, `loading`, `error`, `sortCriteria`, `page`, `pageSize` (only those the
-element has) and turns `sort-change`, `page-change` and `search` into source calls. `SourceBinding` is the Lit adapter.
+search box (`u-input type="search"`). It writes `data`, `totalCount`, `loading`, `error`, `sortCriteria`, `filters`, `page`, `pageSize` (only those the
+element has) and turns `sort-change`, `page-change`, `search` and `filter-change` into source calls. `SourceBinding` is the Lit adapter.
 
 `<u-list-page>` (`@iyulab/enterprise/list-page`; React: `ListPage` from `/react`) is the list screen as slots —
 header, filters, toolbar, view, pager, empty, error. It binds its views and pager to `source`, shows the view named by

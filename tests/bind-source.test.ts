@@ -139,8 +139,54 @@ describe('bindSource', () => {
     expect(calls).toEqual([]);
   });
 
-  it('the protocol names are the documented seven', () => {
-    expect([...VIEW_PROPERTIES]).toEqual(['data', 'totalCount', 'loading', 'error', 'sortCriteria', 'page', 'pageSize']);
+  it('the protocol names are the documented eight', () => {
+    expect([...VIEW_PROPERTIES]).toEqual(['data', 'totalCount', 'loading', 'error', 'sortCriteria', 'filters', 'page', 'pageSize']);
+  });
+});
+
+describe('bindSource — filters', () => {
+  const text = (value: string) => ({ type: 'text', mode: 'contains', value });
+
+  /** 필터를 받는 소스 — flex-table 의 두 소스 모양. */
+  function filteringSource() {
+    const made = makeSource({ filters: {} });
+    const { source, calls } = made;
+    source.setFilters = (filters) => { calls.push(`filters:${Object.keys(filters).join(',')}`); source.set({ filters, page: 0 }); };
+    return made;
+  }
+
+  /** 필터를 쓸 수 있는 표(Lit 접근자). */
+  class FilteringTable extends TableView {}
+  Object.defineProperty(FilteringTable.prototype, 'filters', {
+    get(this: FilteringTable) { return this._v?.filters; },
+    set(this: FilteringTable, v: unknown) { (this._v ??= {}).filters = v; this.writes.push('filters'); },
+    configurable: true,
+  });
+
+  it('🔴a filter-change from the view becomes the source query — and the source filters come back to the view', () => {
+    const { source, calls } = filteringSource();
+    const table = new FilteringTable() as FilteringTable & Record<string, unknown>;
+    bindSource(source, table);
+    fire(table, 'filter-change', { keys: ['name'], filters: { name: text('ce') } });
+    expect(calls).toEqual(['filters:name']);
+    expect(table.filters).toEqual({ name: text('ce') });
+  });
+
+  it('🔴restores the filters the source holds into the view when it binds (a saved query, a second view)', () => {
+    const { source } = filteringSource();
+    source.set({ filters: { status: { type: 'equals', value: 'open' } } });
+    const table = new FilteringTable() as FilteringTable & Record<string, unknown>;
+    bindSource(source, table);
+    expect(table.filters).toEqual({ status: { type: 'equals', value: 'open' } });
+  });
+
+  it('NEGATIVE: a source without setFilters takes no call and writes no filters', () => {
+    const { source, calls } = makeSource();
+    const table = new FilteringTable() as FilteringTable & Record<string, unknown>;
+    bindSource(source, table);
+    fire(table, 'filter-change', { keys: ['name'], filters: { name: text('ce') } });
+    expect(calls).toEqual([]);
+    expect(table.writes).not.toContain('filters');
   });
 });
 
