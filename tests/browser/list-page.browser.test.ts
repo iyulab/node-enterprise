@@ -200,7 +200,7 @@ describe('u-list-page — 검색', () => {
     expect(src.calls.search).toEqual(['kim']);
   });
 
-  it('🔴필터의 검색 가능한 선택(u-select searchable)이 선택지를 거르는 글자는 목록 검색어가 아니다 — 감싼 것도', async () => {
+  it('🔴필터의 검색 가능한 선택(u-select searchable)이 선택지를 거르는 글자(query-change)는 목록 검색어가 아니다 — 감싼 것도', async () => {
     const src = createSource();
     const page = await mount(`
       <u-list-page>
@@ -215,7 +215,7 @@ describe('u-list-page — 검색', () => {
     const heard: string[] = [];
     for (const select of selects) {
       await select.updateComplete;
-      select.addEventListener('search', (e) => heard.push((e as CustomEvent<{ query: string }>).detail.query));
+      select.addEventListener('query-change', (e) => heard.push((e as CustomEvent<{ query: string }>).detail.query));
       const box = select.shadowRoot!.querySelector<HTMLInputElement>('input.search')!;
       box.value = 'ac';
       box.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));

@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- **Requires `@iyulab/components` 3.0 or later; `u-list-page` no longer guards against `u-select`'s old `search`.**
+  Components 3.0 renamed the event a searchable `u-select` fires while it narrows its own options from `search` to
+  `query-change`, so it can no longer be mistaken for a list search. The name-based guard (`OPTION_QUERY_EMITTERS`) that
+  kept that event out of `setSearch` is gone, and with components 2.x a searchable select in `filters` would drive the
+  list search again — hence the new floor. **Migrate:** update `@iyulab/components` to 3.0 (see its changelog for the
+  `u-select` and `u-alert` changes).
+
 ## [0.38.0] - 2026-10-31
 
 ### Changed

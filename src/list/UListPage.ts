@@ -16,11 +16,6 @@ const BOUND_SLOTS = ['view', 'pager'] as const;
 const warnedVocabulary = new WeakSet<Element>();
 /** 그려지지 않는 자식 경고를 이미 낸 요소. */
 const warnedUnslotted = new WeakSet<Element>();
-/**
- * 같은 이름 `search {query}` 를 «목록 검색» 이 아닌 뜻으로 내는 요소 — 그 이벤트는 자기 선택지를 거르는 질의다
- * (`u-select searchable` 은 글자를 칠 때마다 낸다). 필터 영역에 놓여도 목록 검색어가 되지 않는다.
- */
-const OPTION_QUERY_EMITTERS = new Set(['u-select']);
 /** 모든 영역 — 채워지지 않은 영역은 상자째 빠진다. */
 const SLOTS = ['header', 'filters', 'applied', 'toolbar', 'view', 'pager', 'empty', 'error'] as const;
 type SlotName = typeof SLOTS[number];
@@ -324,8 +319,8 @@ export class UListPage extends UElement {
   }
 
   /**
-   * 머리 · 필터 · 툴바에서 온 `search {query}` → 소스 검색어. 뷰·페이저의 것은 그 묶음이 이미 듣고, 선택지 질의
-   * (`OPTION_QUERY_EMITTERS`)는 목록 검색이 아니다 — 영역의 자식 자신이든 그 안쪽(예: `u-field` 가 감싼 선택)이든.
+   * 머리 · 필터 · 툴바에서 온 `search {query}` → 소스 검색어. 뷰·페이저의 것은 그 묶음이 이미 듣는다.
+   * `u-select` 의 선택지 질의는 `query-change`(components 3.0) 라 여기까지 오지 않는다 — 종전의 이름 겹침 가드는 걷었다.
    */
   private onSearch = (e: Event) => {
     const source = this.source;
@@ -336,7 +331,6 @@ export class UListPage extends UElement {
     if (at < 0) return;
     const child = path[at] as Element;
     if (this.bound.has(child)) return;
-    if (path.slice(0, at + 1).some((n) => n instanceof Element && OPTION_QUERY_EMITTERS.has(n.localName))) return;
     source.setSearch(query);
   };
 }
