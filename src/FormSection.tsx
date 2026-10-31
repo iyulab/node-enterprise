@@ -12,6 +12,8 @@ import type { CSSProperties, ReactNode } from 'react'
  *   영문 전용 UI 에서 눈썹 텍스트 느낌이 필요하면 `titleStyle` 로 `--u-text-overline-*`
  *   단을 직접 지정한다 — 그 단은 영문·숫자 라벨을 전제하고 양수 자간을 갖는다.
  *
+ * 제목은 선택이다 — 섹션이 하나뿐인 폼처럼 제목이 가를 대상이 없으면 빼고, 그때 제목 줄은 그려지지 않는다.
+ *
  * 오버라이드 계약(docs/lob-layers.md §2): 구조는 두고 **children 치환 + prop** 으로 바꾼다.
  * ⚠기본 스타일은 병합 가능한 형태로만 둔다 — 호출자의 `style` 이 뒤에 오므로 필요한
  * 항목만 골라 덮을 수 있다. 인라인으로 굳혀 두면 소비자 CSS 가 이길 수 없어(`!important`
@@ -24,7 +26,8 @@ export function FormSection({
   style,
   titleStyle,
 }: {
-  title: ReactNode
+  /** 제목. 없으면(또는 빈 문자열이면) 제목 줄 — 글자 · 밑줄 · 아래 여백 — 을 그리지 않는다. */
+  title?: ReactNode
   children: ReactNode
   className?: string
   style?: CSSProperties
@@ -33,30 +36,36 @@ export function FormSection({
 }) {
   return (
     <div className={className} style={{ marginBottom: 'var(--u-space-xl, 20px)', ...style }}>
-      <div
-        style={{
-          // 타입 스케일의 **label** 단 — 폼 라벨·표 머리행과 같은 층이다.
-          // 종전에는 `11px` 리터럴이었고, 스케일 축이 생기기 전이라 값이 고립돼 있었다.
-          fontSize: 'var(--u-text-label-size, 13px)',
-          fontWeight: 'var(--u-text-label-weight, 600)' as unknown as number,
-          lineHeight: 'var(--u-text-label-leading, 1.5)',
-          letterSpacing: 'var(--u-text-label-tracking, 0)',
-          // 역할 토큰을 읽는다 — 팔레트를 직접 읽으면 브랜드를 맞추려는 소비자가
-          // "진짜 파랑"이 필요한 곳까지 함께 덮게 된다.
-          // 한 단 어둡게 하는 것은 대비 때문이다: 흰 배경에서 --u-primary-color 는
-          // 3.68:1 로 본문 크기 텍스트에 부족하고, 이 파생값은 4.85:1 로 WCAG AA 를 넘는다.
-          color: 'color-mix(in srgb, var(--u-primary-color, #1E88E5) 85%, black)',
-          paddingBottom: 'var(--u-space-xs, 6px)',
-          borderBottom: '1px solid var(--u-border-color-weak, #EEEEEE)',
-          marginBottom: 'var(--u-space-sm, 8px)',
-          ...titleStyle,
-        }}
-      >
-        {title}
-      </div>
+      {hasTitle(title) && (
+        <div
+          style={{
+            // 타입 스케일의 **label** 단 — 폼 라벨·표 머리행과 같은 층이다.
+            // 종전에는 `11px` 리터럴이었고, 스케일 축이 생기기 전이라 값이 고립돼 있었다.
+            fontSize: 'var(--u-text-label-size, 13px)',
+            fontWeight: 'var(--u-text-label-weight, 600)' as unknown as number,
+            lineHeight: 'var(--u-text-label-leading, 1.5)',
+            letterSpacing: 'var(--u-text-label-tracking, 0)',
+            // 역할 토큰을 읽는다 — 팔레트를 직접 읽으면 브랜드를 맞추려는 소비자가
+            // "진짜 파랑"이 필요한 곳까지 함께 덮게 된다.
+            // 한 단 어둡게 하는 것은 대비 때문이다: 흰 배경에서 --u-primary-color 는
+            // 3.68:1 로 본문 크기 텍스트에 부족하고, 이 파생값은 4.85:1 로 WCAG AA 를 넘는다.
+            color: 'color-mix(in srgb, var(--u-primary-color, #1E88E5) 85%, black)',
+            paddingBottom: 'var(--u-space-xs, 6px)',
+            borderBottom: '1px solid var(--u-border-color-weak, #EEEEEE)',
+            marginBottom: 'var(--u-space-sm, 8px)',
+            ...titleStyle,
+          }}
+        >
+          {title}
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--u-space-sm, 8px)' }}>
         {children}
       </div>
     </div>
   )
+}
+
+function hasTitle(title: ReactNode): boolean {
+  return title !== undefined && title !== null && title !== false && title !== ''
 }

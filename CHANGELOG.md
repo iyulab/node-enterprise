@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- **`FormRow` drops columns where its cells would get too narrow.** `columns` is now the most columns a row holds;
+  where a cell would be narrower than `minColumnWidth` (new — default `'14rem'`, the width a date-time input needs
+  to show its value) the row holds as many as fit, down to one. A wide row is unchanged — exactly `columns` equal
+  cells. Before, two date-time inputs side by side at a 390px phone width got 143px cells and hid their values.
+  `minColumnWidth={0}` keeps the count fixed (the previous behavior); a number is px.
+
+### Added
+
+- **`FormSection` `title` is optional.** Without it (or with `''`) the heading line — text, underline and the space
+  below — is not drawn; a form with a single section has nothing for a heading to separate.
+
 ## [0.37.0] - 2026-10-31
 
 ### Added

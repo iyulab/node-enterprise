@@ -104,13 +104,15 @@ import { UInput, UTextarea } from '@iyulab/components/react'
 ```
 
 - `FormRow`는 기본 2컬럼 그리드입니다. 한 칸을 차지하려면 `full`을, 다른 열 수가 필요하면 `columns`를 씁니다.
-- **열 폭 — 선언한 열은 실제로 균등합니다.** 트랙은 `1fr`이 아니라 `minmax(0, 1fr)`입니다. 그리드 아이템의 기본 `min-width: auto`는 내용의 min-content 아래로 줄어들기를 거부해서, 순수 `1fr`로 두면 긴 내용이 든 칸만 부풀고 나머지가 찌그러집니다(400px 컨테이너 실측: 2열 **425/8**, 3열 **425/8/8**). `minmax(0, 1fr)`은 트랙 최소를 0으로 만들어 같은 경우를 **196/196**·**128/128/128**로 만듭니다.
+- **좁은 자리에서는 열이 접힙니다.** `columns`는 상한이고, 한 칸이 `minColumnWidth`(기본 `'14rem'` — 날짜·일시 입력이 값을 다 보이는 폭)보다 좁아지면 담기는 만큼의 열로, 끝내 한 열로 섭니다. 넓은 자리에서는 정확히 `columns`칸입니다. 늘 `columns`열로 두려면 `minColumnWidth={0}`.
+- **열 폭 — 선언한 열은 실제로 균등합니다.** 트랙의 최소가 확정 길이라(`minmax(max(min(100%, 최소 폭), 균등 몫), 1fr)`) 순수 `1fr`처럼 긴 내용이 든 칸만 부풀지 않습니다(400px 컨테이너 실측, 순수 `1fr`: 2열 **425/8**, 3열 **425/8/8**).
 - ⚠**긴 불가분 문자열 자체의 넘침은 별개 축입니다.** 칸이 균등해져도 그 안의 긴 문자열은 자기 칸을 넘습니다 — 셀 쪽에서 `overflow-wrap`으로 다룹니다(`@iyulab/components`의 엘리먼트는 이미 그 값을 갖습니다).
 - 두 컴포넌트 모두 `className`·`style`을 받아 기본값 **뒤에** 병합합니다 — 블록을 복제하지 않고 조정하는 정규 경로입니다. `FormSection`은 제목 줄만 바꾸는 `titleStyle`도 받습니다.
 
 ```tsx
 <FormRow columns={3}>…</FormRow>
 <FormSection title="기본 정보" style={{ marginBottom: 32 }}>…</FormSection>
+<FormSection>…</FormSection>  {/* 제목 없음 — 제목 줄을 그리지 않는다 */}
 ```
 
 > 이 계층이 무엇을 소유하고 무엇을 소유하지 않는지, 새 패턴이 언제 추가되는지는

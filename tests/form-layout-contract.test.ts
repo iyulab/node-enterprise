@@ -19,20 +19,17 @@ const read = (rel: string) => readFileSync(join(root, rel), 'utf-8');
  * 일회성 탐침으로 쟀고, 그 수치는 CHANGELOG 와 README 에 남겼다.
  */
 describe('L2 폼 레이아웃 크기 계약', () => {
-  it('🔴`FormRow` 의 그리드 트랙이 `minmax(0, 1fr)` 이다 — 순수 `1fr` 은 «균등» 을 약속하고 지키지 않는다', () => {
+  it('🔴`FormRow` 의 트랙 최소가 확정 길이다 — 순수 `1fr` 은 «균등» 을 약속하고 지키지 않는다', () => {
     // 그리드 아이템의 기본 `min-width: auto` 는 내용의 min-content 아래로 줄어들기를
     // 거부한다. 그래서 `repeat(n, 1fr)` 은 한 칸에 긴 내용이 들어오면 그 칸만 부풀고
     // 나머지가 찌그러진다 — 실측(400px 컨테이너): 2열이 425/8, 3열이 425/8/8 이었다.
-    // `minmax(0, 1fr)` 은 트랙의 최소를 0 으로 만들어 자식을 건드리지 않고 이를 고친다
-    // (같은 실측에서 196/196 · 128/128/128).
+    // 트랙이 `minmax(<확정 길이>, 1fr)` 이면 내용이 트랙을 키우지 못한다. 배치 자체는
+    // `tests/browser/form-row-collapse.browser.test.tsx` 가 잰다.
     const src = read('src/FormRow.tsx');
-    expect(src, '트랙 정의가 minmax(0, 1fr) 이어야 한다').toMatch(
-      /repeat\(\$\{columns\},\s*minmax\(0,\s*1fr\)\)/,
+    expect(src, '트랙이 auto-fill + minmax(max(min(100%, 최소), 몫), 1fr) 여야 한다').toMatch(
+      /repeat\(auto-fill, minmax\(max\(min\(100%, \$\{min\}\), \$\{share\}\), 1fr\)\)/,
     );
-    expect(
-      /repeat\(\$\{columns\},\s*1fr\)/.test(src),
-      '순수 1fr 트랙이 남아 있다',
-    ).toBe(false);
+    expect(/repeat\([^)]*,\s*1fr\)/.test(src), '순수 1fr 트랙이 남아 있다').toBe(false);
   });
 
   it('`full` 경로는 폭을 100% 로 주장한다', () => {
@@ -43,6 +40,6 @@ describe('L2 폼 레이아웃 크기 계약', () => {
     // 이 계층은 문서가 곧 계약이다(docs/lob-layers.md). 동작만 고치고 적지 않으면
     // 소비자는 여전히 «2열이면 반반» 을 가정한 채 긴 내용을 넣는다.
     const readme = read('README.md');
-    expect(readme, 'README 에 그리드 폭 거동 설명이 없다').toMatch(/minmax\(0,\s*1fr\)/);
+    expect(readme, 'README 에 그리드 폭 거동 설명이 없다').toMatch(/minColumnWidth/);
   });
 });

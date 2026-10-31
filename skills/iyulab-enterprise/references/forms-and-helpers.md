@@ -29,7 +29,7 @@ import { UInput, UTextarea } from '@iyulab/components/react'
 
 | Prop | Type | Purpose |
 |---|---|---|
-| `title` | `ReactNode` | Section heading (required) |
+| `title` | `ReactNode` | Section heading (optional — without it, or with `''`, no heading line is drawn) |
 | `children` | `ReactNode` | Rows, stacked vertically with `--u-space-sm` gap |
 | `className` | `string` | Added to the outer block |
 | `style` | `CSSProperties` | Merged **after** the defaults (bottom margin `--u-space-xl`) |
@@ -44,13 +44,16 @@ letter-spacing; for an overline look in Latin-only UIs, set it through `titleSty
 | Prop | Type | Default | Purpose |
 |---|---|---|---|
 | `children` | `ReactNode` | — | Cells |
-| `columns` | `number` | `2` | Column count |
+| `columns` | `number` | `2` | Most columns per row |
+| `minColumnWidth` | `number \| string` | `'14rem'` | Narrowest a cell may get before the row drops a column (number = px); `0` keeps `columns` always |
 | `full` | `boolean` | — | Single full-width cell; takes precedence over `columns` |
 | `className` | `string` | — | Added to the row |
 | `style` | `CSSProperties` | — | Merged after the defaults |
 
-Tracks are `repeat(columns, minmax(0, 1fr))` with `--u-space-sm` gap, so declared columns
-stay equal even when one cell holds long content. Overflow of a long unbreakable string
+Tracks are `repeat(auto-fill, minmax(max(min(100%, minColumnWidth), equal share), 1fr))`
+with `--u-space-sm` gap: a wide row has exactly `columns` equal cells, a narrow one as many as
+fit at `minColumnWidth`, down to one. The track minimum is a definite length, so declared
+columns stay equal even when one cell holds long content. Overflow of a long unbreakable string
 inside a cell is the cell's concern (`overflow-wrap`).
 
 Override contract: change content through `children` and props, and styling through

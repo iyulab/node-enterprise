@@ -94,8 +94,9 @@ import { UInput, UTextarea } from '@iyulab/components/react'
 </FormSection>
 ```
 
-`FormRow` is a 2-column grid of equal `minmax(0, 1fr)` tracks (`columns` changes the
-count, `full` makes one cell). Both accept `className`/`style`, merged after the defaults.
+`FormRow` is a grid of up to 2 equal columns (`columns` changes the most, `full` makes one
+cell) that drops columns where a cell would be narrower than `minColumnWidth` (`'14rem'`;
+`0` keeps the count fixed). `FormSection`'s `title` is optional — without it no heading line is drawn. Both accept `className`/`style`, merged after the defaults.
 
 ## Other exports
 
