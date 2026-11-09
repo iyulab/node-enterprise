@@ -1,7 +1,7 @@
 {
   "name": "@iyulab/enterprise",
   "version": "0.38.0",
-  "description": "Enterprise utilities and components for iyulab framework",
+  "description": "Business-app building blocks: OData service client, sign-in and list-page scaffolding",
   "keywords": [
     "enterprise",
     "utilities",
