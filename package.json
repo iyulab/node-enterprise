@@ -1,6 +1,6 @@
 {
   "name": "@iyulab/enterprise",
-  "version": "0.39.0",
+  "version": "0.39.1",
   "description": "Business-app building blocks: OData service client, sign-in and list-page scaffolding",
   "keywords": [
     "enterprise",
@@ -61,7 +61,7 @@
     "test:browser": "vitest run --project=browser"
   },
   "dependencies": {
-    "@iyulab/http-client": "^0.14.0",
+    "@iyulab/http-client": "^0.15.0",
     "lit": "^3.3.3",
     "odata-query": "^8.1.0"
   },

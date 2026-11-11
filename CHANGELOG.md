@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.39.1] - 2026-11-11
+
+### Changed
+
+- Follows `@iyulab/http-client` 0.15: the dependency range moves from `^0.14.0` to `^0.15.0`, so an app that takes both
+  packages gets one copy of the client. No code change.
+
 ## [0.39.0] - 2026-11-11
 
 ### Changed
