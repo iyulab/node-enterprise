@@ -1,6 +1,6 @@
 {
   "name": "@iyulab/enterprise",
-  "version": "0.38.0",
+  "version": "0.39.0",
   "description": "Business-app building blocks: OData service client, sign-in and list-page scaffolding",
   "keywords": [
     "enterprise",
@@ -66,7 +66,7 @@
     "odata-query": "^8.1.0"
   },
   "devDependencies": {
-    "@iyulab/components": "^2.37.0",
+    "@iyulab/components": "^3.0.0",
     "@lit/react": "^1.0.8",
     "@microsoft/api-extractor": "^7.58.8",
     "@types/node": "^26.1.1",
@@ -81,7 +81,7 @@
     "vitest": "^5.0.0"
   },
   "peerDependencies": {
-    "@iyulab/components": ">=2.37.0",
+    "@iyulab/components": ">=3.0.0",
     "@lit/react": "^1.0.8",
     "react": "^18.0.0 || ^19.0.0"
   },
